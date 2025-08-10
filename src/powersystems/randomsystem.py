@@ -5,8 +5,6 @@ import torch
 
 class randomsystem:
     def __init__(self, 
-                 active_power: np.ndarray = None,
-                 reactive_power: np.ndarray = None,
                  num_nodes: int = 100,
                  num_children: int = 3,
                  ):
@@ -14,11 +12,9 @@ class randomsystem:
         Initialize the randomsystem class with optional reactive power input.
         
         Parameters:
-        reactive_power (np.ndarray): Optional array of reactive power values.
-        active_power (np.ndarray): Optional array of active power values.
+        num_nodes (int): Number of nodes in the random system.
+        num_children (int): Number of children nodes for each parent node.
         """
-        self.active_power = active_power
-        self.reactive_power = reactive_power
         self.num_nodes = num_nodes
         self.num_children = num_children
         self.gpu = self._checkgpu()
@@ -33,8 +29,9 @@ class randomsystem:
         return torch.cuda.is_available()
 
     def run(self,
-            random_seed: int = 42,
-            plot_graph: bool = True
+            active_power: np.ndarray = None,
+            reactive_power: np.ndarray = None,
+            plot_graph: bool = False
             ):
         """
         Run the power flow analysis for the random system.
@@ -58,8 +55,8 @@ class randomsystem:
 
         # Run power flow analysis
         solution = network_rnd.run_pf(
-            active_power=self.active_power,
-            reactive_power=self.reactive_power
+            active_power=active_power,
+            reactive_power=reactive_power
         )
         
         return solution
@@ -70,8 +67,8 @@ if __name__ == "__main__":
     active_power = np.random.normal(50, scale=1, size=(100, 99))  # Power in kW
     reactive_power = np.random.normal(10, scale=0.5, size=(100, 99))  # Reactive power in kVAR
     
-    system = randomsystem(active_power=active_power, reactive_power=reactive_power, num_nodes=100, num_children=4)
-    result = system.run()
+    system = randomsystem(num_nodes=100, num_children=4)
+    result = system.run(active_power=active_power, reactive_power=reactive_power)
     
     print("Voltage magnitudes at each node:", len(result))
     print("Voltage magnitudes:", result["v"].shape)
