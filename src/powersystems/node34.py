@@ -5,20 +5,14 @@ import torch
 
 class Node34Example:
     
-    def __init__(self, 
-                 active_power: np.ndarray = None,
-                 reactive_power: np.ndarray = None,
-                 
-                 ):
+    def __init__(self):
         """
         Initialize the Node34Example class with optional reactive power input.
         
         Parameters:
-        reactive_power (np.ndarray): Optional array of reactive power values.
-        active_power (np.ndarray): Optional array of active power values.
+        gpu_mode (bool): Whether to use GPU for computation.
         """
-        self.active_power = active_power
-        self.reactive_power = reactive_power
+    
         self.gpu = self._checkgpu()
         
     def _checkgpu(self):
@@ -30,7 +24,10 @@ class Node34Example:
         """
         return torch.cuda.is_available()
 
-    def run(self):
+    def run(self, 
+            active_power: np.ndarray = None,
+            reactive_power: np.ndarray = None
+            ):
         """
         Run the power flow analysis for the 34 node bus network.
         
@@ -48,8 +45,8 @@ class Node34Example:
         
         # Run power flow analysis
         solution = network.run_pf(
-            active_power=self.active_power,
-            reactive_power=self.reactive_power
+            active_power=active_power,
+            reactive_power=reactive_power
         )
         
         return solution
@@ -60,10 +57,10 @@ if __name__ == "__main__":
     active_power = np.random.normal(50, scale=1, size=(100, 33))  # # Power in kW
     print("Active power:", active_power.shape)
     reactive_power = active_power * 0.1
-    example = Node34Example(reactive_power= reactive_power,
-                            active_power=active_power)
+    example = Node34Example()
     
-    result = example.run()
+    result = example.run(reactive_power=reactive_power,
+                        active_power=active_power)
     print("Voltage magnitudes at each node:", len(result))
     print("Voltage magnitudes:", result["v"][1,:])
     print("Convergence status:", result.keys())
