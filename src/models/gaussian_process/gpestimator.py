@@ -170,11 +170,12 @@ class GPestimator:
             raise RuntimeError("The model has not been fitted yet.")
         return self.gp.kernel_
 
+
 if __name__ == "__main__":
     
     # Import the random system
-    n_nodes = 1000
-    total_samples = 100
+    n_nodes = 100
+    total_samples = 200
     active_power = np.random.normal(30, scale=5, size=(total_samples, n_nodes-1))  + np.random.normal(20, scale=4, size=(total_samples, n_nodes-1))  # Power in kW
     reactive_power = np.random.normal(10, scale=2, size=(total_samples, n_nodes-1)) + np.random.normal(1, scale=2, size=(total_samples, n_nodes-1))  # Reactive power in kVAR
     
@@ -202,14 +203,17 @@ if __name__ == "__main__":
     # Predict using the fitted model
     X_test = np.hstack((active_power[n_samples:, :], reactive_power[n_samples:, :]))
     mean, cov = gp_estimator.predict(X_test)
+    direct_samples = gp_estimator.sample(X_test, n_samples=1)
+    direct_samples = direct_samples.reshape(-1, mean.shape[1])  # Flatten to (n_samples, n_targets)
+    print("direct_samples shape:", direct_samples.shape)  # (n_samples, n_targets)
     
     y_target_mag = magnitude_transform(result["v"][n_samples:, :])
     y_target_angle = angle_transform(result["v"][n_samples:, :])
     y_target = np.hstack((y_target_mag, y_target_angle))
     
     # print("errors:", (np.abs(mean - y_target)/ np.abs(y_target)).mean() * 100)
-    print("errors (magnitude):", (np.abs(mean[:, :n_nodes-1] - y_target_mag) / np.abs(y_target_mag)).mean() * 100)
-    print("errors (angle):", (np.abs(mean[:, n_nodes-1:] - y_target_angle) / np.abs(y_target_angle)).mean() * 100)
+    print("errors (magnitude):", (np.abs(direct_samples[:, :n_nodes-1] - y_target_mag) / np.abs(y_target_mag)).mean() * 100)
+    print("errors (angle):", (np.abs(direct_samples[:, n_nodes-1:] - y_target_angle) / np.abs(y_target_angle)).mean() * 100)
 
     # Print the parameters of the model
     print("Model parameters:", gp_estimator._get_inital_params)
@@ -217,5 +221,40 @@ if __name__ == "__main__":
     
     # Print STD and COV
     # # print("Standard Deviation of predictions:", std)
-    print("Covariance of predictions:", cov.shape)
-    print("Mean of predictions:", mean.shape)
+    print("Covariance of predictions:", cov.shape) # (mean.shape[0], mean.shape[0], mean.shape[1])
+    print("Mean of predictions:", mean.shape) # (mean.shape[0], mean.shape[1])
+    
+    from scipy.stats import multivariate_normal
+    distributions = []
+    for i in range(mean.shape[1]):
+        distributions.append(multivariate_normal(mean=mean[:, i], cov=cov[:, :, i]))
+    
+    samples = np.array([dist.rvs(size=1) for dist in distributions]).T  # shape (n_samples, n_targets)
+    print("Samples shape:", samples.shape)  # (n_samples, n_targets)
+    
+    import matplotlib.pyplot as plt
+    # Plot the samples and target values
+    plt.figure(figsize=(10, 5))
+    plt.subplot(1, 3, 1)
+    plt.scatter(y_target[:, -2:], y_target[:, -2:], label='Target Values', alpha=0.5)
+    plt.title('Target Values')
+    plt.xlabel('Magnitude')
+    plt.ylabel('Angle')
+    plt.legend()
+    
+    plt.subplot(1, 3, 2)
+    plt.scatter(direct_samples[:, -2:], direct_samples[:, -2:], label='Predicted Values', alpha=0.5)
+    plt.title('Predicted Values')
+    plt.xlabel('Magnitude')
+    plt.ylabel('Angle')
+    
+    plt.legend()
+    plt.subplot(1, 3, 3)
+    plt.scatter(samples[:, -2:], samples[:, -2:], label='Sampled Values', alpha=0.5)
+    plt.title('Sampled Values')
+    plt.xlabel('Magnitude')
+    plt.ylabel('Angle')
+    plt.legend()
+    
+    plt.tight_layout()
+    plt.savefig('figures/gp_predictions_samples.png')
