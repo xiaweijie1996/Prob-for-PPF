@@ -61,6 +61,29 @@ class randomsystem:
         
         return solution
     
+def magnitude_transform(v):
+    """
+    Calculate the magnitude of a complex voltage vector.
+    
+    Parameters:
+    v (np.ndarray): Complex voltage vector.
+    
+    Returns:
+    np.ndarray: Magnitude of the voltage vector.
+    """
+    return np.sqrt(np.real(v)**2 + np.imag(v)**2)
+
+def angle_transform(v):
+    """
+    Calculate the angle of a complex voltage vector.
+    
+    Parameters:
+    v (np.ndarray): Complex voltage vector.
+    
+    Returns:
+    np.ndarray: Angle of the voltage vector in radians.
+    """
+    return np.angle(v)
     
 if __name__ == "__main__":
     # Example usage of the randomsystem class
