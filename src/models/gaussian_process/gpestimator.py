@@ -16,7 +16,6 @@ Key points:
   bounds** to discourage both RBFs collapsing to the same length-scale.
 """
 
-
 import os
 import sys
 _parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
@@ -28,7 +27,6 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C, WhiteKernel
 
 from src.powersystems.randomsys import randomsystem, magnitude_transform, angle_transform
-
 
 class GPestimator:
     """
@@ -94,6 +92,7 @@ class GPestimator:
                                             normalize_y=normalize_y,
                                             random_state=random_state,
                                             optimizer=optimizer)
+        self.gp.fit(X, y)
 
     def predict(self, X):
         """
@@ -121,6 +120,31 @@ class GPestimator:
         if not hasattr(self, 'gp'):
             raise RuntimeError("The model has not been fitted yet.")
         return self.gp.predict(X, return_cov=True)
+    
+    def sample(self, X, n_samples=100):
+        """
+        Sample from the posterior distribution at new inputs.
+
+        Parameters
+        ----------
+        X : np.ndarray, shape (n_test, n_features)
+            Test inputs. Must have the **same number of features** as training X.
+        n_samples : int, default=100
+            Number of samples to draw from the posterior.
+
+        Returns
+        -------
+        samples : np.ndarray, shape (n_samples, n_test, n_targets)
+            Samples from the posterior distribution for each output dimension.
+
+        Raises
+        ------
+        RuntimeError
+            If called before .fit().
+        """
+        if not hasattr(self, 'gp'):
+            raise RuntimeError("The model has not been fitted yet.")
+        return self.gp.sample_y(X, n_samples=n_samples)
     
     @property
     def _get_inital_params(self):
@@ -151,7 +175,7 @@ if __name__ == "__main__":
     # Import the random system
     n_nodes = 1000
     total_samples = 100
-    active_power = np.random.normal(30, scale=2, size=(total_samples, n_nodes-1))  + np.random.normal(20, scale=2, size=(total_samples, n_nodes-1))  # Power in kW
+    active_power = np.random.normal(30, scale=5, size=(total_samples, n_nodes-1))  + np.random.normal(20, scale=4, size=(total_samples, n_nodes-1))  # Power in kW
     reactive_power = np.random.normal(10, scale=2, size=(total_samples, n_nodes-1)) + np.random.normal(1, scale=2, size=(total_samples, n_nodes-1))  # Reactive power in kVAR
     
     system = randomsystem(num_nodes=n_nodes, num_children=5)
@@ -183,8 +207,10 @@ if __name__ == "__main__":
     y_target_angle = angle_transform(result["v"][n_samples:, :])
     y_target = np.hstack((y_target_mag, y_target_angle))
     
-    print("errors:", (np.abs(mean - y_target)/ np.abs(y_target)).mean() * 100)
-    
+    # print("errors:", (np.abs(mean - y_target)/ np.abs(y_target)).mean() * 100)
+    print("errors (magnitude):", (np.abs(mean[:, :n_nodes-1] - y_target_mag) / np.abs(y_target_mag)).mean() * 100)
+    print("errors (angle):", (np.abs(mean[:, n_nodes-1:] - y_target_angle) / np.abs(y_target_angle)).mean() * 100)
+
     # Print the parameters of the model
     print("Model parameters:", gp_estimator._get_inital_params)
     print("Current kernel parameters:", gp_estimator._get_current_params)
