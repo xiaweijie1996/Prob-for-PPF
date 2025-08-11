@@ -18,7 +18,7 @@ class randomsystem:
         self.num_nodes = num_nodes
         self.num_children = num_children
         self.gpu = self._checkgpu()
-        
+    
     def _checkgpu(self):
         """
         Check if a GPU is available for computation.

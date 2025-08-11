@@ -9,7 +9,8 @@ class Case118PF:
         - p_vec, q_vec: lists or arrays matching the number of loads (net.load).
         """
         self.net = pn.case118()
-        
+    
+    @property   
     def _diagnose(self):
         """
         Print a summary of the network.
