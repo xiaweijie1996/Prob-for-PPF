@@ -26,10 +26,9 @@ def main():
     full_dim = (num_nodes -1) * 2  # Assuming each node has a real and imaginary part
     
     batch_size = 1000
-    epochs = 2000
+    epochs = 100000
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # -----------------------
-    
     
     # Initialize the random system
     random_sys = randomsystem(num_nodes=num_nodes, num_children=num_children)
@@ -59,6 +58,7 @@ def main():
                                 plot_graph=False)
     _voltage_magnitudes = magnitude_transform(_solution['v'])
     _voltage_angles = angle_transform(_solution['v'])
+    
     scaler_p, scaler_q, scaler_vm, scaler_va = fit_powerflow_scalers(
         active_power=_active_power,
         reactive_power=_reactive_power,
@@ -71,9 +71,10 @@ def main():
     
     end_loss = 10000
     for _ in range(epochs):
+        
         # Generate random active and reactive power inputs
         active_power = np.random.normal(50, scale=5, size=(batch_size, num_nodes-1))
-        reactive_power = active_power * power_factor
+        reactive_power = active_power * power_factor # np.random.uniform(0.1, 0.3, size=(batch_size, num_nodes-1))  # Random power factor between 0.1 and 0.3
 
         # Run the power flow analysis
         solution = random_sys.run(active_power=active_power, 
@@ -94,16 +95,26 @@ def main():
         reactive_power = scaler_q.transform(reactive_power)
         input_power = torch.tensor(np.hstack((active_power, reactive_power)), dtype=torch.float32).to(device)
         target_voltage = torch.tensor(voltages, dtype=torch.float32).to(device)
-        print(f"Input Power Shape: {input_power.shape}, Target Voltage Shape: {target_voltage.shape}")
-        
+
+
+        # ------- Forward pass and training -------
         # Zero the gradients
         optimizer.zero_grad()
         
         # Forward pass through the NICE model
         output_voltage, _ja = nice_model.forward(input_power)
         
+        # Inverse pass to get the output power
+        output_power, _j = nice_model.inverse(target_voltage)
+        
         # Compute the loss
-        loss = loss_function(output_voltage, target_voltage)
+        loss_backward = loss_function(output_power, input_power)
+        
+        # Compute the loss
+        loss_forward = loss_function(output_voltage, target_voltage)
+        
+        # Loss
+        loss = loss_forward + loss_backward
     
         # Percentage error
         output_voltage = output_voltage.cpu().detach().numpy()
@@ -118,22 +129,40 @@ def main():
         # Backward pass and optimization
         loss.backward()
         optimizer.step()
+        # ------- Forward pass and training -------
         
-        print(f"Loss: {loss.item()}, epoch: {_+1}/{epochs}, jacobian: {_ja.mean().item()}, "
-              f"percentage error magnitude: {percentage_mag.item()}%, "
-              f"percentage error angle: {percentage_angle.item()}%")
+        
+        # ------- Backward pass and training -------
+        # optimizer.zero_grad()
+        
+        # output_power, _j = nice_model.inverse(target_voltage)
+        
+        # # Compute the loss
+        # loss_backward = loss_function(output_power, input_power)
+        
+        # loss_backward.backward()
+        # optimizer.step()
+        # ------- Backward pass and training -------
+        
+                
+        print(f"Epoch {_+1}/{epochs}, loss forward: {loss_forward.item():.4f}, loss backward: {loss_backward.item():.4f}, jacobian: {_ja.mean().item():.4f}, "
+              f"percentage error magnitude: {percentage_mag.item()}%, percentage error angle: {percentage_angle.item()}%") 
+        
         
         # Log to Weights and Biases
         wb.log({
-            "loss": loss.item(),
+            "loss_forward": loss_forward.item(),
+            "loss_backward": loss_backward.item(),
             "jacobian": _ja.mean().item(),
-            "epoch": _+1
+            "epoch": _+1,
+            "percentage_error_magnitude": percentage_mag.item(),
+            "percentage_error_angle": percentage_angle.item()
         })
 
         
         # Save the model every 100 epochs
-        if (_ + 1) >200 and end_loss > loss.item():
-            end_loss = loss.item()
+        if (_ + 1) >200 and end_loss > loss_forward.item():
+            end_loss = loss_forward.item()
             torch.save(nice_model.state_dict(), f"src/training/nice/savedmodel/nicemodel_{num_nodes}.pth")
             print(f"saved at epoch {_+1} with loss {end_loss}")
     
