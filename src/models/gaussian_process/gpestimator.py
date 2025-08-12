@@ -175,9 +175,9 @@ if __name__ == "__main__":
     
     # Import the random system
     n_nodes = 100
-    total_samples = 200
-    active_power = np.random.normal(30, scale=5, size=(total_samples, n_nodes-1))  + np.random.normal(20, scale=4, size=(total_samples, n_nodes-1))  # Power in kW
-    reactive_power = np.random.normal(10, scale=2, size=(total_samples, n_nodes-1)) + np.random.normal(1, scale=2, size=(total_samples, n_nodes-1))  # Reactive power in kVAR
+    total_samples = 150
+    active_power = np.random.randn(total_samples, n_nodes-1) * 5 + 50
+    reactive_power = active_power * 0.2  # Assuming a power factor of 0.2
     
     system = randomsystem(num_nodes=n_nodes, num_children=5)
     result = system.run(
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     y_target = np.hstack((y_target_mag, y_target_angle))
     
     # print("errors:", (np.abs(mean - y_target)/ np.abs(y_target)).mean() * 100)
-    print("errors (magnitude):", (np.abs(direct_samples[:, :n_nodes-1] - y_target_mag) / np.abs(y_target_mag)).mean() * 100)
+    print("errors (magnitude):", (np.abs(direct_samples[:, :n_nodes-1] - y_target_mag) / np.abs(y_target_mag)).sum() * 100)
     print("errors (angle):", (np.abs(direct_samples[:, n_nodes-1:] - y_target_angle) / np.abs(y_target_angle)).mean() * 100)
 
     # Print the parameters of the model
