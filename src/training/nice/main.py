@@ -12,8 +12,8 @@ from src.powersystems.randomsys import randomsystem, magnitude_transform, angle_
 
 
 def main(): 
-    num_nodes = 10
-    num_children = 2
+    num_nodes = 34
+    num_children = 3
     power_factor = 0.2
     
     split_ratio = 0.6
