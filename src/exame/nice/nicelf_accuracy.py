@@ -82,7 +82,6 @@ with torch.no_grad():
     # pre_p[:, num_nodes-1:] = scaler_q.inverse_transform(pre_p[:, num_nodes-1:])
     
 # Plot the pre_v and pre_p and real
-
 pre_v = pre_v.cpu().numpy()
 pre_p = pre_p.cpu().numpy()
 concat_vm_va = concat_vm_va.cpu().numpy()
