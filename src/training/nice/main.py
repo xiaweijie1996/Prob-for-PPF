@@ -6,6 +6,7 @@ sys.path.append(_parent_dir)
 
 import torch
 import numpy as np
+import wandb as wb
 
 from src.models.nice.nicemodel import NicemModel
 from src.powersystems.randomsys import randomsystem, magnitude_transform, angle_transform
@@ -17,13 +18,14 @@ def main():
     power_factor = 0.2
     
     split_ratio = 0.6
-    n_blocks = 3
-    hiddemen_dim = 32
+    n_blocks = 4
+    hiddemen_dim = 128
     n_layers = 2
     full_dim = (num_nodes -1) * 2  # Assuming each node has a real and imaginary part
     
-    batch_size = 100
-    epochs = 200
+    batch_size = 500
+    epochs = 2000
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # Initialize the random system
     random_sys = randomsystem(num_nodes=num_nodes, num_children=num_children)
@@ -35,7 +37,8 @@ def main():
         n_layers=n_layers,
         split_ratio=split_ratio,
         n_blocks=n_blocks
-    )
+    ).to(device)
+    
     print(f"Model Parameters: {sum(p.numel() for p in nice_model.parameters() if p.requires_grad)}")
     
     # Define the optimizer
@@ -43,6 +46,9 @@ def main():
     
     # Define the loss function
     loss_function = torch.nn.MSELoss()
+    
+    # Initialize Weights and Biases
+    wb.init(project="NICE-PowerFlow")
     
     for _ in range(epochs):
         # Generate random active and reactive power inputs
@@ -61,8 +67,8 @@ def main():
         voltages = np.hstack((voltage_magnitudes, voltage_angles))
         
         # Convert to torch tensor
-        input_power = torch.concat((active_power, reactive_power), dim=1)
-        target_voltage = torch.tensor(voltages, dtype=torch.float32)
+        input_power = torch.concat((active_power, reactive_power), dim=1).to(device)
+        target_voltage = torch.tensor(voltages, dtype=torch.float32).to(device)
         print(f"Input Power Shape: {input_power.shape}, Target Voltage Shape: {target_voltage.shape}")
         
         # Zero the gradients
@@ -78,6 +84,14 @@ def main():
         percentage_error = torch.mean(torch.abs((output_voltage - target_voltage) / target_voltage)) * 100
         
         print(f"Loss: {loss.item()}, epoch: {_+1}/{epochs}, jacobian: {_ja.mean().item()}, percentage error: {percentage_error.item()}%")
+        
+        # Log to Weights and Biases
+        wb.log({
+            "loss": loss.item(),
+            "jacobian": _ja.mean().item(),
+            "percentage_error": percentage_error.item(),
+            "epoch": _+1
+        })
         
         # Backward pass and optimization
         loss.backward()

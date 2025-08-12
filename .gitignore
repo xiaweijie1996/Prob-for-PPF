@@ -1,5 +1,5 @@
 # ignore .venv
 .venv/
 
-# ignore __pycache__
 *__pycache__/
+*wandb/

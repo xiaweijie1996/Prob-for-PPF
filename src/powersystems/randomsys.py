@@ -43,7 +43,7 @@ class randomsystem:
         'convergence', 'iterations_log', 'time_pre_pf_log', 'time_pf_log', 'convergence_log'])
         """
         # Check if there is a GPU available and set the device accordingly
-        device = self.gpu
+        device = False
         
         # Generate a system
         network_rnd = GridTensor.generate_from_graph(
