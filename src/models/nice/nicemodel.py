@@ -138,8 +138,8 @@ if __name__ == "__main__":
     # print("jacobian", torch.cumprod(_ja, dim=0)[-1])  # Should be close to 1 if the jacobian is correct
     
     # Test NicemModel with multiple blocks
-    test_dim = 1000
-    nicem_model = NicemModel(full_dim=test_dim, n_layers=4, split_ratio=0.4, n_blocks=2)
+    test_dim = 20
+    nicem_model = NicemModel(full_dim=test_dim, n_layers=4, split_ratio=0.6, n_blocks=2)
     x = torch.randn(200, test_dim)  # Batch size of 2
     output, _ja = nicem_model.forward(x)
     print(_ja.shape)
