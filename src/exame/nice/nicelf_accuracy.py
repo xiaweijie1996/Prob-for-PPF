@@ -39,7 +39,7 @@ nice_model = NicemModel(
 print(f"Model Parameters: {sum(p.numel() for p in nice_model.parameters() if p.requires_grad)}")
 
 # Define the scalers
-_active_power = np.random.normal(50, scale=5, size=(100, num_nodes-1))  # Power in kW
+_active_power = np.random.normal(50, scale=5, size=(5000, num_nodes-1))  # Power in kW
 _reactive_power = _active_power * power_factor
 _solution = random_sys.run(active_power=_active_power, 
                             reactive_power=_reactive_power, 
