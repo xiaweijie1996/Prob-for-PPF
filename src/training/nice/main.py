@@ -10,7 +10,7 @@ import wandb as wb
 
 from src.models.nice.nicemodel import NicemModel
 from src.powersystems.randomsys import randomsystem, magnitude_transform, angle_transform
-
+from src.utility.scalers import fit_powerflow_scalers
 
 def main(): 
     num_nodes = 34
@@ -19,7 +19,7 @@ def main():
     
     split_ratio = 0.6
     n_blocks = 4
-    hiddemen_dim = 128
+    hiddemen_dim = 256
     n_layers = 2
     full_dim = (num_nodes -1) * 2  # Assuming each node has a real and imaginary part
     
@@ -47,27 +47,48 @@ def main():
     # Define the loss function
     loss_function = torch.nn.MSELoss()
     
-    # Initialize Weights and Biases
-    wb.init(project="NICE-PowerFlow")
+    # Define the scalers
+    _active_power = np.random.normal(50, scale=5, size=(1000, num_nodes-1))  # Power in kW
+    _reactive_power = _active_power * power_factor
+    _solution = random_sys.run(active_power=_active_power, 
+                                reactive_power=_reactive_power, 
+                                plot_graph=False)
+    _voltage_magnitudes = magnitude_transform(_solution['v'])
+    _voltage_angles = angle_transform(_solution['v'])
+    scaler_p, scaler_q, scaler_vm, scaler_va = fit_powerflow_scalers(
+        active_power=_active_power,
+        reactive_power=_reactive_power,
+        voltage_magnitudes=_voltage_magnitudes,
+        voltage_angles=_voltage_angles
+    )
     
+    # Initialize Weights and Biases
+    wb.init(project=f"NICE-PowerFlow-node-{num_nodes}")
+    
+    end_loss = 10000
     for _ in range(epochs):
         # Generate random active and reactive power inputs
-        active_power = torch.randn((batch_size, num_nodes-1)) *  5 + 50
+        active_power = np.random.normal(50, scale=5, size=(batch_size, num_nodes-1))
         reactive_power = active_power * power_factor
 
         # Run the power flow analysis
-        solution = random_sys.run(active_power=active_power.numpy(), 
-                                reactive_power=reactive_power.numpy(), 
+        solution = random_sys.run(active_power=active_power, 
+                                reactive_power=reactive_power, 
                                 plot_graph=False)
 
         # Transform the voltage magnitudes
         voltage_magnitudes = magnitude_transform(solution['v'])
         voltage_angles = angle_transform(solution['v'])
         
-        voltages = np.hstack((voltage_magnitudes, voltage_angles))
+        scaled_voltage_magnitudes = scaler_vm.transform(voltage_magnitudes)
+        scaled_voltage_angles = scaler_va.transform(voltage_angles)
+    
+        voltages = np.hstack((scaled_voltage_magnitudes, scaled_voltage_angles))
         
         # Convert to torch tensor
-        input_power = torch.concat((active_power, reactive_power), dim=1).to(device)
+        active_power = scaler_p.transform(active_power)
+        reactive_power = scaler_q.transform(reactive_power)
+        input_power = torch.tensor(np.hstack((active_power, reactive_power)), dtype=torch.float32).to(device)
         target_voltage = torch.tensor(voltages, dtype=torch.float32).to(device)
         print(f"Input Power Shape: {input_power.shape}, Target Voltage Shape: {target_voltage.shape}")
         
@@ -79,24 +100,39 @@ def main():
         
         # Compute the loss
         loss = loss_function(output_voltage, target_voltage)
-        
+    
         # Percentage error
-        percentage_error = torch.mean(torch.abs((output_voltage - target_voltage) / target_voltage)) * 100
+        output_voltage = output_voltage.cpu().detach().numpy()
+        scaled_output_mag = output_voltage[:, :num_nodes-1]
+        scaled_output_mag = scaler_vm.inverse_transform(scaled_output_mag)
+        scaled_output_angle = output_voltage[:, num_nodes-1:]
+        scaled_output_angle = scaler_va.inverse_transform(scaled_output_angle)
         
-        print(f"Loss: {loss.item()}, epoch: {_+1}/{epochs}, jacobian: {_ja.mean().item()}, percentage error: {percentage_error.item()}%")
+        percentage_mag = np.mean(np.abs((scaled_output_mag - voltage_magnitudes) / voltage_magnitudes)) * 100
+        percentage_angle = np.mean(np.abs((scaled_output_angle - voltage_angles) / voltage_angles)) * 100
+       
+        # Backward pass and optimization
+        loss.backward()
+        optimizer.step()
+        
+        print(f"Loss: {loss.item()}, epoch: {_+1}/{epochs}, jacobian: {_ja.mean().item()}, "
+              f"percentage error magnitude: {percentage_mag.item()}%, "
+              f"percentage error angle: {percentage_angle.item()}%")
         
         # Log to Weights and Biases
         wb.log({
             "loss": loss.item(),
             "jacobian": _ja.mean().item(),
-            "percentage_error": percentage_error.item(),
             "epoch": _+1
         })
+
         
-        # Backward pass and optimization
-        loss.backward()
-        optimizer.step()
-        
+        # Save the model every 100 epochs
+        if (_ + 1) % 200 == 0:
+            if end_loss > loss.item():
+                end_loss = loss.item()
+                torch.save(nice_model.state_dict(), f"src/training/nice/savedmodel/nicemodel_{num_nodes}.pth")
+                print(f"saved at epoch {_+1} with loss {end_loss}")
         
 
 if __name__ == "__main__":
