@@ -13,19 +13,23 @@ from src.powersystems.randomsys import randomsystem, magnitude_transform, angle_
 from src.utility.scalers import fit_powerflow_scalers
 
 def main(): 
+    # Configureation
+    # -----------------------
     num_nodes = 34
     num_children = 3
     power_factor = 0.2
     
     split_ratio = 0.6
-    n_blocks = 4
+    n_blocks = 3
     hiddemen_dim = 256
     n_layers = 2
     full_dim = (num_nodes -1) * 2  # Assuming each node has a real and imaginary part
     
-    batch_size = 500
+    batch_size = 1000
     epochs = 2000
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # -----------------------
+    
     
     # Initialize the random system
     random_sys = randomsystem(num_nodes=num_nodes, num_children=num_children)
@@ -128,12 +132,11 @@ def main():
 
         
         # Save the model every 100 epochs
-        if (_ + 1) % 200 == 0:
-            if end_loss > loss.item():
-                end_loss = loss.item()
-                torch.save(nice_model.state_dict(), f"src/training/nice/savedmodel/nicemodel_{num_nodes}.pth")
-                print(f"saved at epoch {_+1} with loss {end_loss}")
-        
+        if (_ + 1) >200 and end_loss > loss.item():
+            end_loss = loss.item()
+            torch.save(nice_model.state_dict(), f"src/training/nice/savedmodel/nicemodel_{num_nodes}.pth")
+            print(f"saved at epoch {_+1} with loss {end_loss}")
+    
 
 if __name__ == "__main__":
     main()
