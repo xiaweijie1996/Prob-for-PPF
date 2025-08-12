@@ -7,7 +7,7 @@ class BasicFFN(torch.nn.Module):
                  input_dim: int = 128,
                  hiddemen_dim: int = 64,
                  output_dim: int = 10,
-                 n_layers: int = 2
+                 n_layers: int = 1
                  ):
         super(BasicFFN, self).__init__()
         
@@ -22,8 +22,7 @@ class BasicFFN(torch.nn.Module):
             torch.nn.ReLU(),
             *[torch.nn.Sequential(
                 torch.nn.Linear(hiddemen_dim, hiddemen_dim),
-                # Batch normalization can be added if needed
-                torch.nn.BatchNorm1d(hiddemen_dim),
+                # torch.nn.BatchNorm1d(hiddemen_dim),
                 torch.nn.ReLU()
             ) for _ in range(n_layers - 1)],
             torch.nn.Linear(hiddemen_dim, output_dim)
@@ -35,6 +34,7 @@ class BasicFFN(torch.nn.Module):
 if __name__ == "__main__":
     # Example usage
     model = BasicFFN(input_dim=20, hiddemen_dim=64, output_dim=10, n_layers=3)
+    
     # Test forward pass with random input
     x = torch.randn(2, 20)  # Batch size of 1
     output = model(x)
