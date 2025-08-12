@@ -56,7 +56,9 @@ def inverse_pdf_gaussian(
         # Gaussian log p_X(x): use torch.distributions for stability
         mvn = torch.distributions.MultivariateNormal(loc=mean_x, covariance_matrix=cov_matr)
         log_p_x = mvn.log_prob(x)  # shape (B,)
-
+        log_p_x = log_p_x.view(-1)  # ensure it's a 1D tensor
+        logabsdet_inv = logabsdet_inv.view(-1)  # ensure it's a 1D tensor
+        
         log_p_y = log_p_x + logabsdet_inv  # change-of-variables
         p_y = torch.exp(log_p_y)
 
@@ -79,7 +81,7 @@ if __name__ == "__main__":
     model = CubeModel()
 
     # y grid for evaluation
-    y_vals = torch.linspace(-5, 5, 50)
+    y_vals = torch.linspace(-5, 5, 100)
 
     # Numerical PDF from inverse_pdf_gaussian
     log_p_y, p_y, _ = inverse_pdf_gaussian(
@@ -96,6 +98,7 @@ if __name__ == "__main__":
         return (1/np.sqrt(2*np.pi)) * np.exp(-0.5 * z**2)
 
     y_np = y_vals.numpy()
+    print(y_np.shape, p_y.shape)
     p_y_analytical = (1/3.0) * np.abs(y_np) ** (-2/3) * phi(np.sign(y_np) * np.abs(y_np) ** (1/3))
 
     # Plot PDF
