@@ -7,6 +7,7 @@ sys.path.append(_parent_dir)
 import torch
 import numpy as np
 import wandb as wb
+import pickle 
 
 from src.models.nice.nicemodel import NicemModel
 from src.powersystems.randomsys import randomsystem, magnitude_transform, angle_transform
@@ -51,7 +52,7 @@ def main():
     loss_function = torch.nn.MSELoss()
     
     # Define the scalers
-    _active_power = np.random.normal(50, scale=5, size=(1000, num_nodes-1))  # Power in kW
+    _active_power = np.random.normal(50, scale=5, size=(5000, num_nodes-1))  # Power in kW
     _reactive_power = _active_power * power_factor
     _solution = random_sys.run(active_power=_active_power, 
                                 reactive_power=_reactive_power, 
@@ -65,6 +66,16 @@ def main():
         voltage_magnitudes=_voltage_magnitudes,
         voltage_angles=_voltage_angles
     )
+    
+    # Save the scalers as pickle files
+    scalers = {
+        "scaler_p": scaler_p,
+        "scaler_q": scaler_q,
+        "scaler_vm": scaler_vm,
+        "scaler_va": scaler_va
+    }
+    with open(f"src/training/nice/savedmodel/scalers_{num_nodes}.pkl", 'wb') as f:
+        pickle.dump(scalers, f)
     
     # Initialize Weights and Biases
     wb.init(project=f"NICE-PowerFlow-node-{num_nodes}")
@@ -97,14 +108,14 @@ def main():
         target_voltage = torch.tensor(voltages, dtype=torch.float32).to(device)
 
 
-        # ------- Forward pass and training -------
+        # ------- training -------
         # Zero the gradients
         optimizer.zero_grad()
         
         # Forward pass through the NICE model
         output_voltage, _ja = nice_model.forward(input_power)
         
-        # Inverse pass to get the output power
+        # Backward pass to get the output power
         output_power, _j = nice_model.inverse(target_voltage)
         
         # Compute the loss
@@ -129,20 +140,7 @@ def main():
         # Backward pass and optimization
         loss.backward()
         optimizer.step()
-        # ------- Forward pass and training -------
-        
-        
-        # ------- Backward pass and training -------
-        # optimizer.zero_grad()
-        
-        # output_power, _j = nice_model.inverse(target_voltage)
-        
-        # # Compute the loss
-        # loss_backward = loss_function(output_power, input_power)
-        
-        # loss_backward.backward()
-        # optimizer.step()
-        # ------- Backward pass and training -------
+        # ------- training -------
         
                 
         print(f"Epoch {_+1}/{epochs}, loss forward: {loss_forward.item():.4f}, loss backward: {loss_backward.item():.4f}, jacobian: {_ja.mean().item():.4f}, "
@@ -158,7 +156,6 @@ def main():
             "percentage_error_magnitude": percentage_mag.item(),
             "percentage_error_angle": percentage_angle.item()
         })
-
         
         # Save the model every 100 epochs
         if (_ + 1) >200 and end_loss > loss_forward.item():
