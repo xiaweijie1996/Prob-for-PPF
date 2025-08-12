@@ -106,14 +106,14 @@ class NicemModel(torch.nn.Module):
         ])
         
     def forward(self, x):
-        ja = 1
+        ja = torch.ones(x.shape[0], device=x.device)
         for block in self.basic_collection:
             x, _ja = block.forward_direction(x)
             ja *= _ja
         return x, ja
     
     def inverse(self, x):
-        ja = 1
+        ja = torch.ones(x.shape[0], device=x.device)
         for block in reversed(self.basic_collection):
             x, _ja = block.inverse_direction(x)
             ja *= _ja
@@ -146,7 +146,8 @@ if __name__ == "__main__":
     
     # Test inverse pass
     inverse_output, _ = nicem_model.inverse(output)
+    print(_.shape)
     print(inverse_output.shape)  # Should be [2, 6] for full_dim=6
-    print(torch.max(x- inverse_output))  # Should be True if the inverse is correct
+    # print(torch.max(x- inverse_output))  # Should be True if the inverse is correct
     print(torch.allclose(x, inverse_output))  # Should be True if the inverse is correct
-    print("jacobian", _ja)  # Should be close to 1 if the jacobian is correct
+    # print("jacobian", _ja)  # Should be close to 1 if the jacobian is correct
