@@ -62,15 +62,15 @@ class NiceModelBasic(torch.nn.Module):
         x3 = torch.cat([x31, x32], dim=1)
         
         # Make vector multiplication
-        x3 = x3 * self.sigmoid(self.vector)
+        x3 = x3 * self.sigmoid(self.vector.to(x.device))
         return x3, self.sigmoid(self.vector)
     
-    def inverse_direction(self, x):
+    def inverse_direction(self, x3):
         # Make vector division
-        x = x / self.sigmoid(self.vector)
+        x3 = x3 / self.sigmoid(self.vector.to(x3.device))
         
         # Split the input tensor
-        x31, x32 = x[:, :self.split_dim2], x[:, self.split_dim2:]
+        x31, x32 = x3[:, :self.split_dim2], x3[:, self.split_dim2:]
         
         # x2
         x22 = x31
@@ -113,7 +113,7 @@ class NicemModel(torch.nn.Module):
         return x, ja
     
     def inverse(self, x):
-        ja = torch.ones(x.shape[0], 1)
+        ja = 1
         for block in reversed(self.basic_collection):
             x, _ja = block.inverse_direction(x)
             ja *= _ja
