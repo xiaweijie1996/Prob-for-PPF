@@ -3,8 +3,11 @@ import numpy as np
 
 from sklearn.mixture import GaussianMixture
 
+# set all np to be float64
+np.set_printoptions(precision=4, suppress=True, floatmode='fixed')
+
 def inverse_pdf_gaussian(
-    y: np.array,
+    y: torch.Tensor,
     x_distribution: GaussianMixture,
     model: torch.nn.Module,
     device: torch.device = torch.device("cpu")
