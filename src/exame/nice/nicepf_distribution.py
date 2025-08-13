@@ -18,7 +18,7 @@ num_children = 3
 power_factor = 0.2
 
 split_ratio = 0.6
-n_blocks = 4
+n_blocks = 3
 hiddemen_dim = 256
 n_layers = 2
 full_dim = (num_nodes -1) * 2  # Assuming each node has a real and imaginary part
@@ -59,7 +59,7 @@ concat_vm_va = np.concatenate((scaled_vm, scaled_va), axis=1)
 concat_vm_va = torch.tensor(concat_vm_va, device=device, dtype=torch.float32)
 
 # # Load the nice model
-nice_model.load_state_dict(torch.load(f"src/training/nice/savedmodel/nicemodel_epoch_34.pth"))
+nice_model.load_state_dict(torch.load(f"src/training/nice/savedmodel/nicemodel_34.pth"))
 nice_model.eval()
 
 # Perform inference
