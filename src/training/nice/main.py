@@ -87,12 +87,15 @@ def main():
         print(f"Loaded model from {model_path}")
     
     end_loss = 10000
+    node_id = 0
     for _ in range(epochs):
         
         # Generate random active and reactive power inputs
-        active_power = np.random.normal(50, scale=5, size=(batch_size, num_nodes-1))
+        active_power = _active_power[:batch_size].copy()
+        active_power_node1 = np.random.normal(50, scale=5, size=(batch_size, 1))
+        active_power[:, node_id] = active_power_node1.squeeze()
         reactive_power = active_power * power_factor # np.random.uniform(0.1, 0.3, size=(batch_size, num_nodes-1))  # Random power factor between 0.1 and 0.3
-
+        
         # Run the power flow analysis
         solution = random_sys.run(active_power=active_power, 
                                 reactive_power=reactive_power, 
@@ -110,9 +113,9 @@ def main():
         # Convert to torch tensor
         active_power = scaler_p.transform(active_power)
         reactive_power = scaler_q.transform(reactive_power)
+        
         input_power = torch.tensor(np.hstack((active_power, reactive_power)), dtype=torch.float32).to(device)
         target_voltage = torch.tensor(voltages, dtype=torch.float32).to(device)
-
 
         # ------- training -------
         # Zero the gradients
@@ -166,7 +169,7 @@ def main():
         # Save the model every 100 epochs
         if (_ + 1) >200 and end_loss > loss_forward.item():
             end_loss = loss_forward.item()
-            torch.save(nice_model.state_dict(), f"src/training/nice/savedmodel/nicemodel_{num_nodes}.pth")
+            torch.save(nice_model.state_dict(), f"src/training/nice/savedmodel/nicemodel_{num_nodes}_{node_id}.pth")
             print(f"saved at epoch {_+1} with loss {end_loss}")
     
 
