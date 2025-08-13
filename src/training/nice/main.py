@@ -143,8 +143,8 @@ def main():
         # ------- training -------
         
                 
-        print(f"Epoch {_+1}/{epochs}, loss forward: {loss_forward.item():.4f}, loss backward: {loss_backward.item():.4f}, jacobian: {_ja.mean().item():.4f}, "
-              f"percentage error magnitude: {percentage_mag.item()}%, percentage error angle: {percentage_angle.item()}%") 
+        # print(f"Epoch {_+1}/{epochs}, loss forward: {loss_forward.item():.4f}, loss backward: {loss_backward.item():.4f}, jacobian: {_ja.mean().item():.4f}, "
+        #       f"percentage error magnitude: {percentage_mag.item()}%, percentage error angle: {percentage_angle.item()}%") 
         
         
         # Log to Weights and Biases

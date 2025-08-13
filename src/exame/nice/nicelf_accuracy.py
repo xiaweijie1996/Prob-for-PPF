@@ -7,6 +7,7 @@ sys.path.append(_parent_dir)
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 from src.models.nice.nicemodel import NicemModel
 from src.powersystems.randomsys import randomsystem, magnitude_transform, angle_transform
@@ -38,7 +39,7 @@ nice_model = NicemModel(
 
 print(f"Model Parameters: {sum(p.numel() for p in nice_model.parameters() if p.requires_grad)}")
 
-# Define the scalers
+# Define the data
 _active_power = np.random.normal(50, scale=5, size=(5000, num_nodes-1))  # Power in kW
 _reactive_power = _active_power * power_factor
 _solution = random_sys.run(active_power=_active_power, 
@@ -47,13 +48,15 @@ _solution = random_sys.run(active_power=_active_power,
 _voltage_magnitudes = magnitude_transform(_solution['v'])
 _voltage_angles = angle_transform(_solution['v'])
 
-# Fit the scalers
-scaler_p, scaler_q, scaler_vm, scaler_va = fit_powerflow_scalers(
-    active_power=_active_power,
-    reactive_power=_reactive_power,
-    voltage_magnitudes=_voltage_magnitudes,
-    voltage_angles=_voltage_angles
-)
+# Load the scalers
+path_scalers = 'src/training/nice/savedmodel/scalers_34.pkl'
+with open(path_scalers, 'rb') as f:
+    scalers = pickle.load(f)
+    
+scaler_vm = scalers['scaler_vm']
+scaler_va = scalers['scaler_va']
+scaler_p = scalers['scaler_p']
+scaler_q = scalers['scaler_q']
 
 scaled_vm = scaler_vm.transform(_voltage_magnitudes)
 scaled_va = scaler_va.transform(_voltage_angles)
