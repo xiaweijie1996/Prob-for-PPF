@@ -80,6 +80,12 @@ def main():
     # Initialize Weights and Biases
     wb.init(project=f"NICE-PowerFlow-node-{num_nodes}")
     
+    # Load already trained model if exists
+    model_path = f"src/training/nice/savedmodel/nicemodel_{num_nodes}.pth"
+    if os.path.exists(model_path):
+        nice_model.load_state_dict(torch.load(model_path))
+        print(f"Loaded model from {model_path}")
+    
     end_loss = 10000
     for _ in range(epochs):
         
