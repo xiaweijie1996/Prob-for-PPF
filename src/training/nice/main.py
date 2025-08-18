@@ -16,7 +16,7 @@ from src.utility.scalers import fit_powerflow_scalers
 def main(): 
     # Configureation
     # -----------------------
-    num_nodes = 34
+    num_nodes = 3
     num_children = 3
     power_factor = 0.2
     
