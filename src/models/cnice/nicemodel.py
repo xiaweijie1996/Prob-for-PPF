@@ -10,7 +10,7 @@ import src.models.basicnetwork.basicnets as basicnets
 
 class CNiceModelBasic(torch.nn.Module):
     def __init__(self, 
-                 full_dim: int = 2,
+                 input_dim: int = 2,
                  hiddemen_dim: int = 64,
                  condition_dim: int = 128,
                  n_layers: int = 1,
@@ -18,13 +18,13 @@ class CNiceModelBasic(torch.nn.Module):
                  ):
         
         super(CNiceModelBasic, self).__init__()
-        self.full_dim = full_dim
+        self.input_dim = input_dim
         self.condition_dim = condition_dim
         self.n_layers = n_layers
         self.hiddemen_dim = hiddemen_dim
         
-        self.split_dim1 = int(full_dim * split_ratio)
-        self.split_dim2 = full_dim - self.split_dim1
+        self.split_dim1 = int(input_dim * split_ratio)
+        self.split_dim2 = input_dim - self.split_dim1
         
         # Define the layers using BasicFFN
         self.fc1 = basicnets.BasicFFN(
@@ -90,7 +90,7 @@ class CNiceModelBasic(torch.nn.Module):
     
 class CNicemModel(torch.nn.Module):
     def __init__(self, 
-                 full_dim: int = 2,
+                 input_dim: int = 2,
                  hiddemen_dim: int = 64,
                  conditio_dim: int = 12,
                  n_layers: int = 1,
@@ -101,7 +101,7 @@ class CNicemModel(torch.nn.Module):
         
         self.basic_collection = torch.nn.ModuleList([
             CNiceModelBasic(
-                full_dim=full_dim,
+                input_dim=input_dim,
                 condition_dim=conditio_dim,
                 hiddemen_dim=hiddemen_dim,
                 n_layers=n_layers,
@@ -126,12 +126,12 @@ class CNicemModel(torch.nn.Module):
     
 if __name__ == "__main__":
     # Example usage
-    # model = NiceModelBasic(full_dim=6, n_layers=1, split_ratio=0.4)
+    # model = NiceModelBasic(input_dim=6, n_layers=1, split_ratio=0.4)
     
     # # Test forward pass with random input
     # x = torch.randn(2, 6)  # Batch size of 2
     # output, _ja = model.forward_direction(x)
-    # print(output.shape)  # Should be [2, 20] for full_dim=20
+    # print(output.shape)  # Should be [2, 20] for input_dim=20
     # print(_ja.shape)
     
     # # Test inverse pass
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     # Test NicemModel with multiple blocks
     test_dim = 20
     c_dim = 1200
-    nicem_model = CNicemModel(full_dim=test_dim, n_layers=4, split_ratio=0.6, n_blocks=2, 
+    nicem_model = CNicemModel(input_dim=test_dim, n_layers=4, split_ratio=0.6, n_blocks=2, 
                               hiddemen_dim=64, conditio_dim=c_dim)
     x = torch.randn(20, test_dim)  # Batch size of 2
     c = torch.randn(20, c_dim)  # Condition vector
@@ -154,7 +154,7 @@ if __name__ == "__main__":
     # Test inverse pass
     inverse_output, _ = nicem_model.inverse(output, c)
     print(_.shape)
-    print(inverse_output.shape)  # Should be [2, 6] for full_dim=6
+    print(inverse_output.shape)  # Should be [2, 6] for input_dim=6
     # print(torch.max(x- inverse_output))  # Should be True if the inverse is correct
     print(torch.allclose(x, inverse_output))  # Should be True if the inverse is correct
     # print("jacobian", _ja)  # Should be close to 1 if the jacobian is correct

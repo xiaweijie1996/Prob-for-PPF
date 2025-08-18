@@ -7,6 +7,7 @@ class randomsystem:
     def __init__(self, 
                  num_nodes: int = 100,
                  num_children: int = 3,
+                 plot_graph: bool = False
                  ):
         """
         Initialize the randomsystem class with optional reactive power input.
@@ -18,7 +19,16 @@ class randomsystem:
         self.num_nodes = num_nodes
         self.num_children = num_children
         self.gpu = self._checkgpu()
+        self.plot_graph = plot_graph
     
+        # Generate a system
+        self.network_rnd = GridTensor.generate_from_graph(
+            nodes=self.num_nodes,
+            child=self.num_children,
+            plot_graph=self.plot_graph,
+            gpu_mode=False,
+        )
+        
     def _checkgpu(self):
         """
         Check if a GPU is available for computation.
@@ -31,7 +41,6 @@ class randomsystem:
     def run(self,
             active_power: np.ndarray = None,
             reactive_power: np.ndarray = None,
-            plot_graph: bool = False
             ):
         """
         Run the power flow analysis for the random system.
@@ -42,19 +51,9 @@ class randomsystem:
         dict_keys(['v', 'time_pre_pf', 'time_pf', 'time_algorithm', 'iterations',
         'convergence', 'iterations_log', 'time_pre_pf_log', 'time_pf_log', 'convergence_log'])
         """
-        # Check if there is a GPU available and set the device accordingly
-        device = False
-        
-        # Generate a system
-        network_rnd = GridTensor.generate_from_graph(
-            nodes=self.num_nodes,
-            child=self.num_children,
-            plot_graph=plot_graph,
-            gpu_mode=device,
-        )
 
         # Run power flow analysis
-        solution = network_rnd.run_pf(
+        solution = self.network_rnd.run_pf(
             active_power=active_power,
             reactive_power=reactive_power
         )
@@ -91,9 +90,12 @@ if __name__ == "__main__":
     reactive_power = np.random.normal(10, scale=0.5, size=(100, 99))  # Reactive power in kVAR
     
     system = randomsystem(num_nodes=100, num_children=4)
+    # Print the system initial P and Q
+    print("Active Power (P):", system.network_rnd.bus_info['PD'].shape)
+    
     result = system.run(active_power=active_power, reactive_power=reactive_power)
     
     print("Voltage magnitudes at each node:", len(result))
     print("Voltage magnitudes:", result["v"].shape)
     print("Convergence status:", result.keys())
-    
+    print("Active Power (P):", system.network_rnd.bus_info['PD'])
