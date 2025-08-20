@@ -9,7 +9,7 @@ import numpy as np
 import wandb as wb
 import pickle 
 
-from src.models.cnice.nicemodel import CNicemModel
+from models.cnice.cnicemodel import CNicemModel
 from src.powersystems.randomsys import randomsystem, magnitude_transform, angle_transform
 from src.utility.scalers import fit_powerflow_scalers
 
@@ -90,10 +90,9 @@ def main():
         pickle.dump(scalers, f)
     
     # Initialize Weights and Biases
-    wb.init(project=f"cNICE-PowerFlow-node-{num_nodes}")
+    # wb.init(project=f"cNICE-PowerFlow-node-{num_nodes}")
     
     # Load already trained model if exists
-    # model_path = f"src/training/cnice/savedmodel/cnicemodel_{num_nodes}.pth"
     model_path = os.path.join(save_path, f"cnicemodel_{num_nodes}.pth")
     if os.path.exists(model_path):
         nice_model.load_state_dict(torch.load(model_path))
@@ -102,6 +101,7 @@ def main():
     end_loss = 10000
     for _ in range(epochs):
         
+        #-------input and target power flow data preparation-------
         # Generate random active and reactive power inputs
         active_power = np.random.normal(mean_vector[1:], scale=5, size=(batch_size, num_nodes-1))
         reactive_power = active_power * power_factor # np.random.uniform(0.1, 0.3, size=(batch_size, num_nodes-1))  # Random power factor between 0.1 and 0.3
@@ -126,14 +126,22 @@ def main():
         input_power = torch.tensor(np.hstack((active_power, reactive_power)), dtype=torch.float32).to(device)
         target_voltage = torch.tensor(voltages, dtype=torch.float32).to(device)
         
+        
         #-------input and target power flow data preparation-------
-        p_index = np.arange(0, num_nodes-1) # randomly select a node to perturb
-        q_index = np.arange(0, num_nodes-1)
+        p_index = torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
+        # q_index = np.arange(0, num_nodes-1)
+        q_index = p_index
+
+        input_x = torch.cat((input_power[:, p_index].unsqueeze(1), input_power[:, p_index+num_nodes-1].unsqueeze(1)), dim=1)  # shape (batch_size, 2)
+        input_c = torch.cat((input_power[:, :p_index], 
+                            input_power[:, p_index+1:p_index+num_nodes-1],
+                            input_power[:, p_index+num_nodes:]
+                            ), dim=1)
+        output_y = torch.cat((target_voltage[:, q_index].unsqueeze(1),
+                              target_voltage[:, q_index+num_nodes-1].unsqueeze(1)
+                            ), dim=1)
+        print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
         
-        input_x = input_power[:, p_index]
-        input_c = torch.concat((input_power[:, :p_index], input_power[:, p_index+1:]), dim=1)
-        
-        output_y = target_voltage[:, q_index]
         
         # ------- training -------
         # Zero the gradients
@@ -186,7 +194,7 @@ def main():
         if (_ + 1) >200 and end_loss > loss_forward.item():
             end_loss = loss_forward.item()
             # torch.save(nice_model.state_dict(), f"src/training/nice/savedmodel/cnicemodel_{num_nodes}.pth")
-            torch.save(nice_model.state_dict(), os.path.join(save_path, f"cnicemodel_{num_nodes}_{node_id}.pth"))
+            torch.save(nice_model.state_dict(), os.path.join(save_path, f"cnicemodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
     
 

@@ -65,7 +65,7 @@ class CNiceModelBasic(torch.nn.Module):
         self.null_token = torch.nn.Parameter(torch.randn(1, self.hidden_dim_condition))
         
         # define a nn.parameter vector 
-        self.vector = torch.nn.Parameter(torch.randn(1))
+        self.vector = torch.nn.Parameter(torch.randn(1, self.input_dim))
         self.vectorcontrain = torch.nn.Sigmoid()
     
     def add_pe_and_null_to_c(self, c, index_p, index_v):
@@ -133,14 +133,20 @@ class CNiceModelBasic(torch.nn.Module):
         x3 = torch.cat([x31, x32], dim=1)
         
         # Make vector multiplication
-        x3 = x3 * self.vectorcontrain(self.vector.to(x.device))
-        return x3, torch.abs(self.vectorcontrain(self.vector))
+        scaler = self.vectorcontrain(self.vector.to(x.device))
+        scaler = scaler.expand(x3.shape[0], -1)  # Expand to match batch size
+        x3 = x3 * scaler
+        return x3, torch.abs(torch.cumprod(scaler, dim=1))[:,-1] # Return the Jacobian determinant as well
     
     def inverse_direction(self, x3, c, index_p, index_v):
         c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v)
         
+        # Adjust the vector to the device
+        scaler = self.vectorcontrain(self.vector.to(x.device))
+        scaler = scaler.expand(x3.shape[0], -1)  # Expand to match batch size
+        
         # Make vector division
-        x3 = x3 / self.vectorcontrain(self.vector.to(x.device))
+        x3 = x3 / scaler
         
         # Split the input tensor
         x31, x32 = x3[:, :self.split_dim2], x3[:, self.split_dim2:]
@@ -156,7 +162,7 @@ class CNiceModelBasic(torch.nn.Module):
         # Combine the outputs
         x1 = torch.cat([x11, x12], dim=1)
 
-        return x1, 1/  torch.abs(self.vectorcontrain(self.vector))
+        return x1, 1/(torch.abs(torch.cumprod(self.vectorcontrain(self.vector), dim=1))[:,-1])  # Return the Jacobian determinant as well
     
     
 class CNicemModel(torch.nn.Module):
@@ -173,6 +179,7 @@ class CNicemModel(torch.nn.Module):
                  ):
         super(CNicemModel, self).__init__()
         
+        self.input_dim = input_dim
         self.basic_collection = torch.nn.ModuleList([
             CNiceModelBasic(
                 input_dim=input_dim,
@@ -186,34 +193,33 @@ class CNicemModel(torch.nn.Module):
             ) for _ in range(n_blocks)
         ])
         
-    def forward(self, x, c, index_p=0, index_v=1):
-        ja = torch.ones(x.shape[0], device=x.device)
+    def forward(self, x, c, index_p, index_v):
+        ja = torch.ones((x.shape[0]), device=x.device)
         for block in self.basic_collection:
             x, _ja = block.forward_direction(x, c, index_p=index_p, index_v=index_v)
-            ja *= _ja
+            ja = ja * _ja
         return x, ja
     
-    def inverse(self, x, c, index_p=0, index_v=1):
-        ja = torch.ones(x.shape[0], device=x.device)
+    def inverse(self, x, c, index_p, index_v):
+        ja = torch.ones((x.shape[0]), device=x.device)
         for block in reversed(self.basic_collection):
             x, _ja = block.inverse_direction(x, c, index_p=index_p, index_v=index_v)
-            ja *= _ja
+            ja = ja * _ja
         return x, ja
     
     
 if __name__ == "__main__":
     # Example usage
-
     # Test NicemModel with multiple blocks
     test_dim = 2
     c_dim = 100
     index_v = 1
     index_p = 2
-    nicem_model = CNicemModel(input_dim=test_dim, n_layers=4, split_ratio=0.6, n_blocks=2, 
-                              hidden_dim=64, conditio_dim=c_dim, 
+    nicem_model = CNicemModel(input_dim=test_dim, n_layers=1, split_ratio=0.6, n_blocks=2, 
+                              hidden_dim=64, condition_dim=c_dim, 
                               hidden_dim_condition=32, output_dim_condition=1, n_layers_condition=2)
-    x = torch.randn(20, test_dim)  # Batch size of 2
-    c = torch.randn(20, c_dim)  # Condition vector
+    x = torch.randn(5, test_dim)  # Batch size of 2
+    c = torch.randn(5, c_dim)  # Condition vector
     output, _ja = nicem_model.forward(x, c, index_p=index_p, index_v=index_v)
     print(_ja.shape)
     
@@ -227,4 +233,10 @@ if __name__ == "__main__":
     # # Test add positional encoding and null token
     # index_i = 2  # Example index
     c_proccessed = nicem_model.basic_collection[0].add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v)
-    print("Processed condition shape:", c_proccessed.shape)  # Should be [20
+    print("Processed condition shape:", c_proccessed.shape)  
+    
+    #　check _ja
+    print("Jacobian determinant:", _ja[0])
+    print("scalers:", nicem_model.basic_collection[0].vectorcontrain(nicem_model.basic_collection[0].vector))
+    _ja = torch.cumprod(nicem_model.basic_collection[0].vectorcontrain(nicem_model.basic_collection[0].vector), dim=1)
+    print("Jacobian determinant shape:", _ja)
