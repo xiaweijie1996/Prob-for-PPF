@@ -142,7 +142,7 @@ class CNiceModelBasic(torch.nn.Module):
         c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v)
         
         # Adjust the vector to the device
-        scaler = self.vectorcontrain(self.vector.to(x.device))
+        scaler = self.vectorcontrain(self.vector.to(x3.device))
         scaler = scaler.expand(x3.shape[0], -1)  # Expand to match batch size
         
         # Make vector division
