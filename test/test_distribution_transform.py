@@ -18,7 +18,7 @@ if __name__ == "__main__":
     c_dim = 10
     index_v = 1
     index_p = 1
-    batch = 10000
+    batch = 1000
     
     nicem_model = CNicemModel(input_dim=test_dim, n_layers=1, split_ratio=0.5, n_blocks=2, 
                             hidden_dim=64, condition_dim=c_dim, 
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     x_inverse, _ja_inverse = nicem_model.inverse(_input_y, c, index_p=index_p, index_v=index_v)
     
     # p_y_compute = x_dix.log_prob(x_inverse).exp() * _ja_inverse
-    p_y_compute = gmm.score_samples(_input_y.numpy())
+    p_y_compute = gmm.score_samples(x_inverse.detach().numpy())
     p_y_compute = torch.tensor(p_y_compute, dtype=torch.float32)
     p_y_compute = p_y_compute.exp()* _ja_inverse
     print(_ja_inverse.mean().item(), p_y_compute.mean().item())
