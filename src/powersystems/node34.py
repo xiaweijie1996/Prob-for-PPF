@@ -13,7 +13,7 @@ class Node34Example:
         gpu_mode (bool): Whether to use GPU for computation.
         """
     
-        self.gpu = self._checkgpu()
+        self.gpu = False
         
         # Load the 34 node bus network
         self.network = GridTensor(gpu_mode=self.gpu)
