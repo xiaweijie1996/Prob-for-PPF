@@ -10,23 +10,24 @@ import wandb as wb
 import pickle 
 
 from src.models.cnice.cnicemodel import CNicemModel
-from src.powersystems.randomsys import randomsystem, magnitude_transform, angle_transform
+from src.powersystems.randomsys import  magnitude_transform, angle_transform
+from src.powersystems.node34 import Node34Example
 from src.utility.scalers import fit_powerflow_scalers
 
 def main(): 
     # Configureation
     # -----------------------
-    num_nodes = 4
-    num_children = 3
+    num_nodes = 34
+    # num_children = 3
     power_factor = 0.2
     
     split_ratio = 0.5
     n_blocks = 3
-    hiddemen_dim = 64
+    hiddemen_dim = 128
     c_dim = (num_nodes - 1) * 2
     n_layers = 4
     input_dim = 2  # Assuming each node has a real and imaginary part
-    hiddemen_dim_condition = 32
+    hiddemen_dim_condition = 128
     output_dim_condition = 1
     n_layers_condition = 2
     
@@ -37,8 +38,8 @@ def main():
     # -----------------------
     
     # Initialize the random system
-    random_sys = randomsystem(num_nodes=num_nodes, num_children=num_children)
-    mean_vector = random_sys.network_rnd.bus_info['PD']
+    random_sys = Node34Example()
+    mean_vector = [50 + i*2 for i in range(num_nodes)]  # Example mean vector
     mean_vector = np.array(mean_vector)
     print(f"Mean vector: {mean_vector[1:].shape}, {mean_vector[1:]}")
     
@@ -89,7 +90,25 @@ def main():
         pickle.dump(scalers, f)
     
     # Initialize Weights and Biases
-    # wb.init(project=f"cNICE-PowerFlow-node-{num_nodes}")
+    wb.init(project=f"cNICE-PowerFlow-node-{num_nodes}")
+    
+    # Log model the configuration
+    wb.config.update({
+        "num_nodes": num_nodes,
+        "power_factor": power_factor,
+        "split_ratio": split_ratio,
+        "n_blocks": n_blocks,
+        "hiddemen_dim": hiddemen_dim,
+        "c_dim": c_dim,
+        "n_layers": n_layers,
+        "input_dim": input_dim,
+        "hiddemen_dim_condition": hiddemen_dim_condition,
+        "output_dim_condition": output_dim_condition,
+        "n_layers_condition": n_layers_condition,
+        "batch_size": batch_size,
+        "epochs": epochs,
+        "device": device.type
+    })
     
     # Load already trained model if exists
     model_path = os.path.join(save_path, f"cnicemodel_{num_nodes}.pth")
@@ -103,6 +122,8 @@ def main():
         #-------input and target power flow data preparation-------
         # Generate random active and reactive power inputs
         active_power = np.random.normal(mean_vector[1:], scale=5, size=(batch_size, num_nodes-1))
+        # active_power = torch.random.
+        print(f"Active power shape: {active_power.mean()}")
         reactive_power = active_power * power_factor # np.random.uniform(0.1, 0.3, size=(batch_size, num_nodes-1))  # Random power factor between 0.1 and 0.3
         
         # Run the power flow analysis
