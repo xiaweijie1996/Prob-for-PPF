@@ -88,7 +88,7 @@ class CNiceModelBasic(torch.nn.Module):
         c_add (torch.Tensor): Condition vector of shape (batch_size, 1).
         """
         #  torh.sin(index_v) and expand to match batch size
-        v_info = torch.sin(torch.tensor(index_v, dtype=torch.float32))
+        v_info = torch.sin(torch.tensor(index_v, dtype=torch.float32)).to(c.device)
         v_info = v_info.unsqueeze(0).expand(c.shape[0], -1)  # shape (batch_size, 1)
         
         c = torch.cat([c, v_info], dim=-1) 
@@ -98,13 +98,13 @@ class CNiceModelBasic(torch.nn.Module):
         c_add = self.fc_add_dim(c)
         
         # Replace the index_i-th element with the null token
-        c_add[:, index_p, :] = self.null_token
+        c_add[:, index_p, :] = self.null_token.to(c.device)
         num_nodes = int(self.condition_dim / 2) + 1
         c_add[:, index_p + (num_nodes-1), :] = self.null_token
         
         # Add positional encoding
         c_pe = basicnets.abs_pe(c_add)
-        c_add = c_pe + c_add
+        c_add = c_pe.to(c.device) + c_add
         
         # Map c_add to a single dimension
         c_add = self.fc_min_dim(c_add)

@@ -163,7 +163,7 @@ def main():
                             ), dim=1)
         # print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
         
-        
+
         # ------- training -------
         # Zero the gradients
         optimizer.zero_grad()
