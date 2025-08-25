@@ -15,6 +15,10 @@ class Node34Example:
     
         self.gpu = self._checkgpu()
         
+        # Load the 34 node bus network
+        self.network = GridTensor(gpu_mode=self.gpu)
+        
+        
     def _checkgpu(self):
         """
         Check if a GPU is available for computation.
@@ -38,13 +42,10 @@ class Node34Example:
         'convergence', 'iterations_log', 'time_pre_pf_log', 'time_pf_log', 'convergence_log'])
         """
         # Check if there is a GPU available and set the device accordingly
-        device = self.gpu
-        
-        # Load the 34 node bus network
-        network = GridTensor(gpu_mode=device)
+       
         
         # Run power flow analysis
-        solution = network.run_pf(
+        solution = self.network.run_pf(
             active_power=active_power,
             reactive_power=reactive_power
         )
@@ -54,14 +55,18 @@ class Node34Example:
     
 if __name__ == "__main__":
     # Example usage of the Node34Example class
-    active_power = np.random.normal(50, scale=1, size=(100, 33))  # # Power in kW
+    np.random.seed(42)
+    active_power = np.random.normal(50, scale=1, size=(2, 33))  # # Power in kW
+    print("Active power shape:", active_power.mean())
     print("Active power:", active_power.shape)
     reactive_power = active_power * 0.1
-    example = Node34Example()
+    system = Node34Example()
+    # print("Active Power (P):", system.)
+    # mean_vector = system.network_rnd.bus_info
     
-    result = example.run(reactive_power=reactive_power,
+    result = system.run(reactive_power=reactive_power,
                         active_power=active_power)
     print("Voltage magnitudes at each node:", len(result))
-    print("Voltage magnitudes:", result["v"][1,:])
+    print("Voltage magnitudes:", result["v"].mean())
     print("Convergence status:", result.keys())
     
