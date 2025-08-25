@@ -109,6 +109,10 @@ def main():
         "epochs": epochs,
         "device": device.type
     })
+    # Log Model size
+    wb.config.update({
+        "model_parameters": sum(p.numel() for p in nice_model.parameters() if p.requires_grad)
+    })
     
     # Load already trained model if exists
     model_path = os.path.join(save_path, f"cnicemodel_{num_nodes}.pth")
@@ -122,8 +126,7 @@ def main():
         #-------input and target power flow data preparation-------
         # Generate random active and reactive power inputs
         active_power = np.random.normal(mean_vector[1:], scale=5, size=(batch_size, num_nodes-1))
-        # active_power = torch.random.
-        print(f"Active power shape: {active_power.mean()}")
+   
         reactive_power = active_power * power_factor # np.random.uniform(0.1, 0.3, size=(batch_size, num_nodes-1))  # Random power factor between 0.1 and 0.3
         
         # Run the power flow analysis
@@ -158,7 +161,7 @@ def main():
         output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
                               target_voltage[:, v_index+num_nodes-1].unsqueeze(1)
                             ), dim=1)
-        print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
+        # print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
         
         
         # ------- training -------
