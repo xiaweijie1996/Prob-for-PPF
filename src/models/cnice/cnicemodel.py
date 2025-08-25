@@ -99,8 +99,8 @@ class CNiceModelBasic(torch.nn.Module):
         
         # Replace the index_i-th element with the null token
         c_add[:, index_p, :] = self.null_token
-        num_nodes = int(self.condition_dim / 2) 
-        c_add[:, index_p + num_nodes, :] = self.null_token
+        num_nodes = int(self.condition_dim / 2) + 1
+        c_add[:, index_p + (num_nodes-1), :] = self.null_token
         
         # Add positional encoding
         c_pe = basicnets.abs_pe(c_add)

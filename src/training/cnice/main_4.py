@@ -9,7 +9,7 @@ import numpy as np
 import wandb as wb
 import pickle 
 
-from models.cnice.cnicemodel import CNicemModel
+from src.models.cnice.cnicemodel import CNicemModel
 from src.powersystems.randomsys import randomsystem, magnitude_transform, angle_transform
 from src.utility.scalers import fit_powerflow_scalers
 
@@ -85,7 +85,6 @@ def main():
         "scaler_vm": scaler_vm,
         "scaler_va": scaler_va
     }
-    # with open(f"src/training/cnice/savedmodel/scalers_{num_nodes}.pkl", 'wb') as f:
     with open(os.path.join(save_path, f"scalers_{num_nodes}.pkl"), 'wb') as f:
         pickle.dump(scalers, f)
     
@@ -98,7 +97,7 @@ def main():
         nice_model.load_state_dict(torch.load(model_path))
         print(f"Loaded model from {model_path}")
     
-    end_loss = 10000
+    end_loss = 1e6
     for _ in range(epochs):
         
         #-------input and target power flow data preparation-------
@@ -130,15 +129,13 @@ def main():
         #-------input and target power flow data preparation-------
         p_index = torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
         # q_index = np.arange(0, num_nodes-1)
-        q_index = p_index
+        v_index = p_index
 
         input_x = torch.cat((input_power[:, p_index].unsqueeze(1), input_power[:, p_index+num_nodes-1].unsqueeze(1)), dim=1)  # shape (batch_size, 2)
-        input_c = torch.cat((input_power[:, :p_index], 
-                            input_power[:, p_index+1:p_index+num_nodes-1],
-                            input_power[:, p_index+num_nodes:]
-                            ), dim=1)
-        output_y = torch.cat((target_voltage[:, q_index].unsqueeze(1),
-                              target_voltage[:, q_index+num_nodes-1].unsqueeze(1)
+        input_c = input_power.clone()
+        
+        output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
+                              target_voltage[:, v_index+num_nodes-1].unsqueeze(1)
                             ), dim=1)
         print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
         
@@ -148,10 +145,10 @@ def main():
         optimizer.zero_grad()
         
         # Forward pass through the NICE model
-        output_voltage, _ja = nice_model.forward(input_x, input_c, index_p=p_index, index_v=q_index)
+        output_voltage, _ja = nice_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
         
         # Backward pass to get the output power
-        output_power, _j = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=q_index)
+        output_power, _j = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
         
         # Compute the loss
         loss_backward = loss_function(output_power, input_x)
@@ -163,22 +160,14 @@ def main():
         loss = loss_forward + loss_backward
     
         # Percentage error
-        # output_voltage = output_voltage.cpu().detach().numpy()
-        # scaled_output_mag = output_voltage[:, :num_nodes-1]
-        # scaled_output_mag = scaler_vm.inverse_transform(scaled_output_mag)
-        # scaled_output_angle = output_voltage[:, num_nodes-1:]
-        # scaled_output_angle = scaler_va.inverse_transform(scaled_output_angle)
-        
-        # percentage_mag = np.mean(np.abs((scaled_output_mag - voltage_magnitudes) / voltage_magnitudes)) * 100
-        # percentage_angle = np.mean(np.abs((scaled_output_angle - voltage_angles) / voltage_angles)) * 100
-       
+        loss_mangitude = loss_function(output_voltage[:, 0], output_y[:, 0])
+        loss_angle = loss_function(output_voltage[:, 1], output_y[:, 1])
+    
         # Backward pass and optimization
         loss.backward()
         optimizer.step()
-                
-        # print(f"Epoch {_+1}/{epochs}, loss forward: {loss_forward.item():.4f}, loss backward: {loss_backward.item():.4f}, jacobian: {_ja.mean().item():.4f}, ")
-            #   f"percentage error magnitude: {percentage_mag.item()}%, percentage error angle: {percentage_angle.item()}%") 
         
+        print(f"Epoch {_+1}, Loss Forward: {loss_forward.item():.6f}, Loss Backward: {loss_backward.item():.6f}, Jacobean: {_ja.mean().item():.6f}, Percentage Error Magnitude: {loss_mangitude.item():.6f}, Percentage Error Angle: {loss_angle.item():.6f}")
         
         # ----------Log to Weights and Biases
         wb.log({
@@ -186,14 +175,13 @@ def main():
             "loss_backward": loss_backward.item(),
             "jacobian": _ja.mean().item(),
             "epoch": _+1,
-            # "percentage_error_magnitude": percentage_mag.item(),
-            # "percentage_error_angle": percentage_angle.item()
+            "percentage_error_magnitude": loss_mangitude.item(),
+            "percentage_error_angle": loss_angle.item()
         })
         
         # Save the model every 100 epochs
         if (_ + 1) >200 and end_loss > loss_forward.item():
             end_loss = loss_forward.item()
-            # torch.save(nice_model.state_dict(), f"src/training/nice/savedmodel/cnicemodel_{num_nodes}.pth")
             torch.save(nice_model.state_dict(), os.path.join(save_path, f"cnicemodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
     
