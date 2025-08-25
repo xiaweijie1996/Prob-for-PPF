@@ -22,6 +22,7 @@ class randomsystem:
         self.plot_graph = plot_graph
     
         # Generate a system
+        np.random.seed(42) 
         self.network_rnd = GridTensor.generate_from_graph(
             nodes=self.num_nodes,
             child=self.num_children,
@@ -86,12 +87,15 @@ def angle_transform(v):
     
 if __name__ == "__main__":
     # Example usage of the randomsystem class
-    active_power = np.random.normal(50, scale=1, size=(100, 99))  # Power in kW
-    reactive_power = np.random.normal(10, scale=0.5, size=(100, 99))  # Reactive power in kVAR
+    active_power = np.random.normal(50, scale=1, size=(50, 4))  # Power in kW
+    reactive_power = np.random.normal(10, scale=0.5, size=(50, 4))  # Reactive power in kVAR
     
-    system = randomsystem(num_nodes=100, num_children=4)
+    system = randomsystem(num_nodes=5, num_children=2, plot_graph=True)
     # Print the system initial P and Q
     print("Active Power (P):", system.network_rnd.bus_info['PD'].shape)
+    mean_vector = system.network_rnd.bus_info['PD']
+    mean_vector = np.array(mean_vector)
+    print(f"Mean vector: {mean_vector[1:].shape}, {mean_vector[1:]}")
     
     result = system.run(active_power=active_power, reactive_power=reactive_power)
     
