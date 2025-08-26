@@ -120,8 +120,8 @@ scaled_reactive_power = scaler_q.transform(_reactive_power)
 gmm = GaussianMixture(n_components=n_components, covariance_type='full', random_state=0)
 _target_samples = np.concatenate((scaled_active_power[:, p_index].reshape(-1, 1),
                                   scaled_reactive_power[:, p_index].reshape(-1, 1)), axis=1)
-gmm.fit(_target_samples[:, 0].reshape(-1, 1))
-# gmm.fit(_target_samples)
+# gmm.fit(_target_samples[:, 0].reshape(-1, 1))
+gmm.fit(_target_samples)
 print(f"GMM means: {gmm.means_}, covariances: {gmm.covariances_}, weights: {gmm.weights_}")
 print(f"target samples, mean and variance: {_target_samples.mean(axis=0)}, {_target_samples.std(axis=0)}")
 concat_vm_va = np.concatenate((scaled_vm, scaled_va), axis=1)
@@ -207,7 +207,7 @@ for i in range(n_bins):
         (y[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
         )
 
-        density[j, i] = np.sum(filter) / (batch_size*gap_area)
+        density[j, i] = np.sum(filter) / (batch_size * gap_area)
         
         # cdf filter
         cdf_filter = (
@@ -223,16 +223,16 @@ fig = plt.figure(figsize=(14, 6))
 ax1 = fig.add_subplot(1, 2, 1, projection='3d')
 ax1.plot_surface(grid_yy0, grid_yy1, density, cmap='viridis', edgecolor='none')
 ax1.set_title('PDF of Output')
-ax1.set_xlabel('x')
-ax1.set_ylabel('y')
+ax1.set_xlabel('v_m')
+ax1.set_ylabel('v_a')
 ax1.set_zlabel('Density')
 
 # Second subplot: CDF
 ax2 = fig.add_subplot(1, 2, 2, projection='3d')
 ax2.plot_surface(grid_yy0, grid_yy1,  cum_density, cmap='viridis', edgecolor='none')
 ax2.set_title('CDF of Output')
-ax2.set_xlabel('x')
-ax2.set_ylabel('y')
+ax2.set_xlabel('v_m')
+ax2.set_ylabel('v_a')
 ax2.set_zlabel('Cumulative Density')
 
 plt.tight_layout()
@@ -245,9 +245,11 @@ plt.close()
 # Condition input, the same for all does not matter the p_index as it will be replaced in the null token, the scenario is fixed
 nice_model.eval()
 x_inverse, _ja_inverse = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
-p_y_compute = gmm.score_samples(x_inverse[:,0].detach().numpy().reshape(-1, 1))
+x_inverse[:,1] = x_inverse[:,0]  # only keep the active power
+# p_y_compute = gmm.score_samples(x_inverse[:,0].detach().numpy().reshape(-1, 1))
+p_y_compute = gmm.score_samples(x_inverse.detach().numpy())
 p_y_compute = torch.tensor(p_y_compute, dtype=torch.float32)
-p_y_compute = p_y_compute.exp()* _ja_inverse
+p_y_compute = p_y_compute.exp() * _ja_inverse
 print(_ja_inverse.mean().item(), p_y_compute.mean().item())
 
 # Compute the density for each bin
@@ -263,7 +265,7 @@ for i in range(n_bins):
         )
         
         if np.sum(filter) > 0:
-            density_y[j, i] = p_y_compute[filter].mean() # multiply by the area
+            density_y[j, i] = p_y_compute[filter].mean()  # multiply by the area
         else:
             density_y[j, i] = 0.0
 
@@ -273,7 +275,11 @@ for i in range(n_bins):
     for j in range(n_bins):
         # sum over all bins less than or equal to (i, j)
         density_sum = density_y[:j+1, :i+1].sum()
-        cum_density_y[j, i] = density_sum * gap_area  # multiply by the area
+        cum_density_y[j, i] = density_sum # multiply by the area
+
+max_cum_density_y = cum_density_y.max().item()
+cum_density_y = cum_density_y / max_cum_density_y  # normalize to 1
+density_y = density_y/max_cum_density_y
 
 # plot the density of the output
 fig = plt.figure(figsize=(14, 6))
@@ -281,15 +287,15 @@ fig = plt.figure(figsize=(14, 6))
 ax1 = fig.add_subplot(1, 2, 1, projection='3d')
 ax1.plot_surface(grid_yy0, grid_yy1, density_y.detach().numpy(), cmap='viridis', edgecolor='none')
 ax1.set_title('Computed PDF of Output')
-ax1.set_xlabel('x')
-ax1.set_ylabel('y')
+ax1.set_xlabel('v_m')
+ax1.set_ylabel('v_a')
 ax1.set_zlabel('Density')
 # Second subplot: CDF
 ax2 = fig.add_subplot(1, 2, 2, projection='3d')
 ax2.plot_surface(grid_yy0, grid_yy1, cum_density_y.detach().numpy(), cmap='viridis', edgecolor='none')
 ax2.set_title('Computed CDF of Output')
-ax2.set_xlabel('x')
-ax2.set_ylabel('y')
+ax2.set_xlabel('v_m')
+ax2.set_ylabel('v_a')
 ax2.set_zlabel('Cumulative Density')    
 plt.tight_layout()
 plt.savefig(f'figures/target_node_{v_index}_{num_nodes}_computed_pdf_cdf.png')
@@ -312,4 +318,29 @@ ax.set_xlabel('x0')
 ax.set_ylabel('x1')
 ax.legend()
 plt.savefig(f'figures/target_node_x_{v_index}_{num_nodes}_input_inverse_distribution_2d.png')
+plt.close()
+
+# plot the density comparison if x_inverse and input_x
+log_density_input_x = gmm.score_samples(input_x_np)
+log_density_x_inverse = gmm.score_samples(x_inverse_np)
+density_input_x = np.exp(log_density_input_x)
+density_x_inverse = np.exp(log_density_x_inverse)
+# 3d two surface plot
+fig = plt.figure(figsize=(14, 6))
+# First subplot: Input x density
+ax1 = fig.add_subplot(1, 2, 1, projection='3d')
+ax1.scatter(input_x_np[:,0], input_x_np[:,1], density_input_x, c='b', label='Input x Density', alpha=0.5)
+ax1.set_title('Input x Density')
+ax1.set_xlabel('x0')
+ax1.set_ylabel('x1')
+ax1.set_zlabel('Density')
+# Second subplot: Inverse x density
+ax2 = fig.add_subplot(1, 2, 2, projection='3d')
+ax2.scatter(x_inverse_np[:,0], x_inverse_np[:,1], density_x_inverse, c='r', label='Inverse x Density', alpha=0.5)
+ax2.set_title('Inverse x Density')
+ax2.set_xlabel('x0')
+ax2.set_ylabel('x1')
+ax2.set_zlabel('Density')
+plt.tight_layout()
+plt.savefig(f'figures/target_node_x_{v_index}_{num_nodes}_input_inverse_density_3d.png')
 plt.close()
