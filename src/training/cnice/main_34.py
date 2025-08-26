@@ -64,8 +64,8 @@ def main():
     loss_function = torch.nn.MSELoss()
     
     # Define the scalers
-    _active_power = np.random.normal(mean_vector[1:], scale=5, size=(50000, num_nodes-1))  # Power in kW
-    _reactive_power = _active_power * power_factor
+    _active_power = np.random.normal(mean_vector[1:], scale=10, size=(50000, num_nodes-1))  # Power in kW
+    _reactive_power = np.random.normal(mean_vector[1:], scale=10, size=(50000, num_nodes-1)) * power_factor
     _solution = random_sys.run(active_power=_active_power, 
                                 reactive_power=_reactive_power, 
                                 )
@@ -125,13 +125,18 @@ def main():
         
         #-------input and target power flow data preparation-------
         # Generate random active and reactive power inputs
-        active_power = np.random.normal(mean_vector[1:], scale=5, size=(batch_size, num_nodes-1))
+        active_power = np.random.normal(mean_vector[1:], scale=10, size=(batch_size, num_nodes-1))
    
-        reactive_power = active_power * power_factor # np.random.uniform(0.1, 0.3, size=(batch_size, num_nodes-1))  # Random power factor between 0.1 and 0.3
+        reactive_power = np.random.normal(mean_vector[1:], scale=10, size=(batch_size, num_nodes-1)) * power_factor # np.random.uniform(0.1, 0.3, size=(batch_size, num_nodes-1))  # Random power factor between 0.1 and 0.3
         
         # Run the power flow analysis
-        solution = random_sys.run(active_power=active_power, 
-                                reactive_power=reactive_power)
+        try:
+            solution = random_sys.run(active_power=active_power, 
+                                    reactive_power=reactive_power)
+        except:
+            # If the power flow analysis fails, skip this iteration
+            print("Power flow analysis failed, skipping this iteration.")
+            continue
 
         # Transform the voltage magnitudes
         voltage_magnitudes = magnitude_transform(solution['v'])
