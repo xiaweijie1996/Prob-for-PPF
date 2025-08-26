@@ -31,7 +31,8 @@ hiddemen_dim_condition = 128
 output_dim_condition = 1
 n_layers_condition = 2
 
-batch_size = 1000
+_root = 20
+batch_size = _root**2
 epochs = 100000
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 save_path = 'src/training/cnice/savedmodel'
@@ -148,3 +149,39 @@ pre_v_total[:, :num_nodes-1] = scaler_vm.inverse_transform(pre_v_total[:, :num_n
 pre_v_total[:, num_nodes-1:] = scaler_va.inverse_transform(pre_v_total[:, num_nodes-1:])
 pre_p_total[:, :num_nodes-1] = scaler_p.inverse_transform(pre_p_total[:, :num_nodes-1])
 pre_p_total[:, num_nodes-1:] = scaler_q.inverse_transform(pre_p_total[:, num_nodes-1:])
+
+# pre_v and pre_p scaled back
+pre_vm_scaled = pre_v_total[:, :num_nodes-1]
+pre_va_scaled = pre_v_total[:, num_nodes-1:]
+pre_p_scaled = pre_p_total[:, :num_nodes-1]
+pre_q_scaled = pre_p_total[:, num_nodes-1:]
+
+# Plot the pre_v_scaled and pre_p_scaled and real and target
+plt.figure(figsize=(12, 6))
+plt.subplot(1, 2, 1)
+plt.scatter(pre_vm_scaled[:, p_index], pre_va_scaled[:, p_index], label='Predicted Voltage', alpha=0.1)
+plt.scatter(_voltage_magnitudes[:, p_index], _voltage_angles[:, p_index], label='Target Voltage', alpha=0.1)        
+plt.title('Predicted vs Target Voltage Magnitudes and Angles (Scaled Back)')
+plt.xlabel('Predicted Value')
+plt.ylabel('Target Value')
+plt.legend()
+plt.subplot(1, 2, 2)
+# print(p_index)
+# p_index = 2
+# print(pre_p_scaled[:3, p_index])
+# print("--------------------")
+# print(_active_power[:3, p_index])
+# print("--------------------")
+# print(pre_q_scaled[:3, p_index])
+# print("--------------------")
+# print(_reactive_power[:3, p_index])
+# print("--------------------")
+plt.scatter(pre_p_scaled[:, p_index], pre_q_scaled[:, p_index], label='Predicted Power', alpha=0.1)
+plt.scatter(_active_power[:, p_index], _reactive_power[:, p_index], label='Target Power', alpha=0.1)        
+plt.title('Predicted vs Target Active and Reactive Power (Scaled Back)') 
+plt.xlabel('Predicted Value')
+plt.ylabel('Target Value')
+plt.legend()
+plt.tight_layout()
+plt.savefig(f'figures/cnice_{num_nodes}node_accuracy2.png', dpi=300)
+
