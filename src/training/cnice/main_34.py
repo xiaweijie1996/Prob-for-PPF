@@ -8,6 +8,7 @@ import torch
 import numpy as np
 import wandb as wb
 import pickle 
+from sklearn.mixture import GaussianMixture
 
 from src.models.cnice.cnicemodel import CNicemModel
 from src.powersystems.randomsys import  magnitude_transform, angle_transform
@@ -67,9 +68,11 @@ def main():
     # Define the scalers
     _active_power = np.random.normal(mean_vector[1:], scale=std, size=(50000, num_nodes-1))  # Power in kW
     _reactive_power = np.random.normal(mean_vector[1:], scale=std, size=(50000, num_nodes-1)) * power_factor
+
+    # Run the power flow analysis to get voltage magnitudes and angles
     _solution = random_sys.run(active_power=_active_power, 
-                                reactive_power=_reactive_power, 
-                                )
+                                reactive_power=_reactive_power) 
+                                
     _voltage_magnitudes = magnitude_transform(_solution['v'])
     _voltage_angles = angle_transform(_solution['v'])
     
@@ -127,8 +130,7 @@ def main():
         #-------input and target power flow data preparation-------
         # Generate random active and reactive power inputs
         active_power = np.random.normal(mean_vector[1:], scale=std, size=(batch_size, num_nodes-1))
-   
-        reactive_power = np.random.normal(mean_vector[1:], scale=std, size=(batch_size, num_nodes-1)) * power_factor # np.random.uniform(0.1, 0.3, size=(batch_size, num_nodes-1))  # Random power factor between 0.1 and 0.3
+        reactive_power = np.random.normal(mean_vector[1:], scale=std, size=(batch_size, num_nodes-1)) * np.random.uniform(0.1, 0.5, size=(batch_size, num_nodes-1))  # Random power factor between 0.1 and 0.3
         
         # Run the power flow analysis
         try:
