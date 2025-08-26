@@ -23,7 +23,6 @@ from src.utility.inversepdf import inverse_pdf_gaussian
 # Configureation
 # -----------------------
 num_nodes = 34
-# num_children = 3
 power_factor = 0.2
 
 split_ratio = 0.5
@@ -36,9 +35,9 @@ hiddemen_dim_condition = 128
 output_dim_condition = 1
 n_layers_condition = 2
 
-_root = 20
+_root = 40
 batch_size = _root**2
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = 'cpu'
 save_path = 'src/training/cnice/savedmodel'
 
 # Fix other nodes, vary one node
@@ -245,11 +244,11 @@ plt.close()
 # Condition input, the same for all does not matter the p_index as it will be replaced in the null token, the scenario is fixed
 nice_model.eval()
 x_inverse, _ja_inverse = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
-x_inverse[:,1] = x_inverse[:,0]  # only keep the active power
+# x_inverse[:,1] = x_inverse[:,0]  # only keep the active power
 # p_y_compute = gmm.score_samples(x_inverse[:,0].detach().numpy().reshape(-1, 1))
-p_y_compute = gmm.score_samples(x_inverse.detach().numpy())
+p_y_compute = gmm.score_samples(x_inverse.detach().cpu().numpy())
 p_y_compute = torch.tensor(p_y_compute, dtype=torch.float32)
-p_y_compute = p_y_compute.exp() * _ja_inverse
+p_y_compute = p_y_compute.exp().cpu() * _ja_inverse.cpu()
 print(_ja_inverse.mean().item(), p_y_compute.mean().item())
 
 # Compute the density for each bin
@@ -275,11 +274,11 @@ for i in range(n_bins):
     for j in range(n_bins):
         # sum over all bins less than or equal to (i, j)
         density_sum = density_y[:j+1, :i+1].sum()
-        cum_density_y[j, i] = density_sum # multiply by the area
+        cum_density_y[j, i] = density_sum * gap_area  # multiply by the area
 
-max_cum_density_y = cum_density_y.max().item()
-cum_density_y = cum_density_y / max_cum_density_y  # normalize to 1
-density_y = density_y/max_cum_density_y
+# max_cum_density_y = cum_density_y.max().item()
+# cum_density_y = cum_density_y / max_cum_density_y  # normalize to 1
+# density_y = density_y/max_cum_density_y
 
 # plot the density of the output
 fig = plt.figure(figsize=(14, 6))
