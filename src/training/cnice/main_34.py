@@ -34,7 +34,7 @@ def main():
     n_layers_condition = 2
     
     batch_size = 1000
-    epochs = 100000
+    epochs = 100000000
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     save_path = 'src/training/cnice/savedmodel'
     # -----------------------
@@ -156,9 +156,6 @@ def main():
         
         input_power = torch.tensor(np.hstack((active_power, reactive_power)), dtype=torch.float32).to(device)
         target_voltage = torch.tensor(voltages, dtype=torch.float32).to(device)
-        # print(input_power.mean(), target_voltage.mean())
-        # print(input_power.std(), target_voltage.std())
-        # break
         
         #-------input and target power flow data preparation-------
         p_index = torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
