@@ -148,7 +148,9 @@ def main():
         
         input_power = torch.tensor(np.hstack((active_power, reactive_power)), dtype=torch.float32).to(device)
         target_voltage = torch.tensor(voltages, dtype=torch.float32).to(device)
-        
+        # print(input_power.mean(), target_voltage.mean())
+        # print(input_power.std(), target_voltage.std())
+        # break
         
         #-------input and target power flow data preparation-------
         p_index = torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
