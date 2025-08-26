@@ -10,23 +10,24 @@ import matplotlib.pyplot as plt
 import pickle
 
 from src.models.cnice.cnicemodel import CNicemModel
-from src.powersystems.randomsys import randomsystem, magnitude_transform, angle_transform
+from src.powersystems.node34 import Node34Example
+from src.powersystems.randomsys import magnitude_transform, angle_transform
 from src.utility.scalers import fit_powerflow_scalers
 
 # -----------------------
 # Configureation
 # -----------------------
-num_nodes = 4
-num_children = 3
+num_nodes = 34
+# num_children = 3
 power_factor = 0.2
 
 split_ratio = 0.5
 n_blocks = 3
-hiddemen_dim = 64
+hiddemen_dim = 128
 c_dim = (num_nodes - 1) * 2
 n_layers = 4
 input_dim = 2  # Assuming each node has a real and imaginary part
-hiddemen_dim_condition = 32
+hiddemen_dim_condition = 128
 output_dim_condition = 1
 n_layers_condition = 2
 
@@ -38,8 +39,8 @@ save_path = 'src/training/cnice/savedmodel'
 # -----------------------
 # Initialize the random system　model and scalers
 # -----------------------
-random_sys = randomsystem(num_nodes=num_nodes, num_children=num_children)
-mean_vector = random_sys.network_rnd.bus_info['PD']
+random_sys = Node34Example()
+mean_vector = [50 + i*2 for i in range(num_nodes)]  # Example mean vector
 mean_vector = np.array(mean_vector)
 print(f"Mean vector: {mean_vector[1:].shape}, {mean_vector[1:]}")
 
@@ -108,6 +109,7 @@ print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output s
 nice_model.eval()
 with torch.no_grad():
     pre_v, _jaf = nice_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
+    # fake_output_y = pre_v + torch.randn_like(output_y) * 0.1
     pre_p, _jai = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
     
 pre_v = pre_v.cpu().numpy()
@@ -131,7 +133,7 @@ plt.xlabel('Predicted Value')
 plt.ylabel('Target Value')
 plt.legend()
 plt.tight_layout()
-plt.savefig('figures/cnice_4node_accuracy1.png', dpi=300)
+plt.savefig(f'figures/cnice_{num_nodes}node_accuracy1.png', dpi=300)
 
 # Reconstruct the full voltage and power arrays
 pre_v_total = target_voltage.clone().cpu().numpy()
