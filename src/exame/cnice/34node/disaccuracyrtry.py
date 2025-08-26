@@ -89,7 +89,7 @@ _weights = np.random.randint(1, 10, size=(n_components,))
 _weights = _weights / np.sum(_weights)
 _weights = _weights.round(2)
 _active_power_index = np.random.normal(0,
-                                      scale=0.2, 
+                                      scale=5, 
                                       size=(batch_size, )) + mean_vector[1+p_index]
 # for _w in _weights:
 #     _active_power_index = np.concatenate((_active_power_index, 
@@ -120,8 +120,8 @@ scaled_reactive_power = scaler_q.transform(_reactive_power)
 gmm = GaussianMixture(n_components=n_components, covariance_type='full', random_state=0)
 _target_samples = np.concatenate((scaled_active_power[:, p_index].reshape(-1, 1),
                                   scaled_reactive_power[:, p_index].reshape(-1, 1)), axis=1)
-# gmm.fit(_target_samples[:, 0].reshape(-1, 1))
-gmm.fit(_target_samples)
+gmm.fit(_target_samples[:, 0].reshape(-1, 1))
+# gmm.fit(_target_samples)
 print(f"GMM means: {gmm.means_}, covariances: {gmm.covariances_}, weights: {gmm.weights_}")
 print(f"target samples, mean and variance: {_target_samples.mean(axis=0)}, {_target_samples.std(axis=0)}")
 concat_vm_va = np.concatenate((scaled_vm, scaled_va), axis=1)
@@ -245,7 +245,7 @@ plt.close()
 # Condition input, the same for all does not matter the p_index as it will be replaced in the null token, the scenario is fixed
 nice_model.eval()
 x_inverse, _ja_inverse = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
-p_y_compute = gmm.score_samples(x_inverse.detach().numpy())
+p_y_compute = gmm.score_samples(x_inverse[:,0].detach().numpy().reshape(-1, 1))
 p_y_compute = torch.tensor(p_y_compute, dtype=torch.float32)
 p_y_compute = p_y_compute.exp()* _ja_inverse
 print(_ja_inverse.mean().item(), p_y_compute.mean().item())
@@ -261,15 +261,19 @@ for i in range(n_bins):
         (y[:, 0] >= grid_y0[0, i]) &
         (y[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
         )
-
+        
         if np.sum(filter) > 0:
-            density_y[j, i] = p_y_compute[filter].mean()
+            density_y[j, i] = p_y_compute[filter].mean() # multiply by the area
         else:
             density_y[j, i] = 0.0
 
 # Compute cdf
-cum_density_y = torch.cumsum(torch.cumsum(density_y, dim=0), dim=1) * gap_area
-
+cum_density_y = torch.zeros((n_bins, n_bins))
+for i in range(n_bins):
+    for j in range(n_bins):
+        # sum over all bins less than or equal to (i, j)
+        density_sum = density_y[:j+1, :i+1].sum()
+        cum_density_y[j, i] = density_sum * gap_area  # multiply by the area
 
 # plot the density of the output
 fig = plt.figure(figsize=(14, 6))
