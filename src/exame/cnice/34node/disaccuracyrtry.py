@@ -23,7 +23,7 @@ from src.utility.inversepdf import inverse_pdf_gaussian
 # Configureation
 # -----------------------
 num_nodes = 34
-power_factor = 0.2
+power_factor = 0.3
 
 split_ratio = 0.5
 n_blocks = 3
@@ -35,7 +35,7 @@ hiddemen_dim_condition = 128
 output_dim_condition = 1
 n_layers_condition = 2
 
-_root = 40
+_root = 100
 batch_size = _root**2
 device = 'cpu'
 save_path = 'src/training/cnice/savedmodel'
@@ -43,7 +43,7 @@ save_path = 'src/training/cnice/savedmodel'
 # Fix other nodes, vary one node
 p_index = 12 # torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
 v_index = p_index
-n_components = 1
+n_components = 3
 print(f"Target node index: {p_index}, {v_index}")
 # -----------------------
 # Initialize the random system　model and scalers
@@ -101,7 +101,10 @@ print(f"p_index: {p_index}, v_index: {v_index}, weights: {_weights}, _active_pow
 # Replace _active_power_index with sampled_index
 _active_power = np.tile(mean_vector[1:], (batch_size, 1))
 _active_power[:, p_index] = _active_power_index
-_reactive_power = _active_power * power_factor
+# _reactive_power = _active_power * power_factor
+print (_active_power.mean(axis=0).reshape(-1).shape)
+_reactive_power = (np.random.normal(0, scale=5, size=(batch_size, _active_power.shape[1])) 
+                   + _active_power.mean(axis=0).reshape(1, -1)) * power_factor
 
 # Run the power flow to get the voltages
 _solution = random_sys.run(active_power=_active_power, 
@@ -262,7 +265,7 @@ for i in range(n_bins):
         (y[:, 0] >= grid_y0[0, i]) &
         (y[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
         )
-        
+   
         if np.sum(filter) > 0:
             density_y[j, i] = p_y_compute[filter].mean()  # multiply by the area
         else:

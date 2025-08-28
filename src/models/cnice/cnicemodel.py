@@ -17,7 +17,8 @@ class CNiceModelBasic(torch.nn.Module):
                  split_ratio: float = 0.6,
                  hidden_dim_condition: int = 32,
                  output_dim_condition: int = 1,
-                 n_layers_condition: int = 2
+                 n_layers_condition: int = 2,
+                 affine: bool = True
                  ):
         
         super(CNiceModelBasic, self).__init__()
@@ -28,6 +29,7 @@ class CNiceModelBasic(torch.nn.Module):
         self.hidden_dim_condition = hidden_dim_condition
         self.output_dim_condition = output_dim_condition
         self.n_layers_condition = n_layers_condition
+        self.affine = affine
         
         self.split_dim1 = int(input_dim * split_ratio)
         # print(f"Split dimensions: {self.split_dim1}, {input_dim - self.split_dim1}")
@@ -65,8 +67,9 @@ class CNiceModelBasic(torch.nn.Module):
         self.null_token = torch.nn.Parameter(torch.randn(1, self.hidden_dim_condition))
         
         # define a nn.parameter vector 
+        
         self.vector = torch.nn.Parameter(torch.randn(1, self.input_dim))
-        self.vectorcontrain = torch.nn.Sigmoid()
+        self.vectorcontrain = self.adjusted_sigmoid
     
     def add_pe_and_null_to_c(self, c, index_p, index_v):
         """
@@ -224,8 +227,8 @@ if __name__ == "__main__":
     print(_ja.shape)
     
     # Test inverse pass
-    inverse_output, _ = nicem_model.inverse(output, c, index_p=index_p, index_v=index_v)
-    print(_.shape)
+    inverse_output, _jfi = nicem_model.inverse(output, c, index_p=index_p, index_v=index_v)
+    print(_jfi.shape)
     print(inverse_output.shape)  # Should be [2, 6] for input_dim=6
     # print(torch.max(x- inverse_output))  # Should be True if the inverse is correct
     print(torch.allclose(x, inverse_output))  # Should be True if the inverse is correct
@@ -236,7 +239,8 @@ if __name__ == "__main__":
     print("Processed condition shape:", c_proccessed.shape)  
     
     #　check _ja
-    print("Jacobian determinant:", _ja[0])
+    print("Jacobian determinant:", _ja)
+    print("Jacobian determinant:", _jfi)
     print("scalers:", nicem_model.basic_collection[0].vectorcontrain(nicem_model.basic_collection[0].vector))
     _ja = torch.cumprod(nicem_model.basic_collection[0].vectorcontrain(nicem_model.basic_collection[0].vector), dim=1)
     print("Jacobian determinant shape:", _ja)
