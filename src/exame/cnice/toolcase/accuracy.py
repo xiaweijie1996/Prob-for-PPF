@@ -7,10 +7,8 @@ sys.path.append(_parent_dir)
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import pickle
 
 from src.models.cnice.cnicemodel import CNicemModel
-
 
 # -----------------------
 # Configureation
