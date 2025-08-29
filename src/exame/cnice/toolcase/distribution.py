@@ -35,8 +35,7 @@ hiddemen_dim_condition = 24
 output_dim_condition = 1
 n_layers_condition = 2
 
-_root = 100
-batch_size = _root**2
+batch_size = 30000
 n_bins = 20  # Number of bins for the histogram
 device = 'cpu'
 save_path = 'src/training/cnice/savedmodel'
@@ -93,8 +92,23 @@ nice_model.load_state_dict(torch.load(model_path, map_location=device))
 # -----------------------    
 # Define the data and distribution
 # -----------------------
-active_power_index = np.random.normal(0, scale=std, size=(batch_size, 1))
-reactive_power_index = np.random.normal(0, scale=std, size=(batch_size, 1)) * np.random.uniform(0.01, 0.5, size=(batch_size, 1))
+# active_power_index = np.random.normal(0, scale=std, size=(int(batch_size/3), 1))
+for i in range(3):
+    active_power_index_part = np.random.normal(i*10, scale=std, size=(int(batch_size/3), 1))
+    if i == 0:
+        active_power_index = active_power_index_part
+    else:
+        active_power_index = np.vstack((active_power_index, active_power_index_part))
+        
+# reactive_power_index = np.random.normal(0, scale=std, size=(batch_size, 1)) * np.random.uniform(0.01, 0.5, size=(batch_size, 1))
+_ratio = np.random.uniform(0.01, 0.5, size=(int(batch_size/3), 1))
+for i in range(3):
+    reactive_power_index_part = np.random.normal(i*10, scale=std, size=(int(batch_size/3), 1)) * _ratio
+    if i == 0:
+        reactive_power_index = reactive_power_index_part
+    else:
+        reactive_power_index = np.vstack((reactive_power_index, reactive_power_index_part))
+        
 _target_samples = np.hstack((active_power_index, reactive_power_index))
 
 # Fig a gmm to the input data
