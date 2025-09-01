@@ -168,7 +168,7 @@ class CSplineBasic(torch.nn.Module):
             logabsdet (torch.Tensor): Log absolute determinant of the Jacobian of shape (batch_size, dim).
         """
         # check x is in which bin from widths
-        index = torch.searchsorted(widths, input_x, right=True)
+        index = torch.searchsorted(widths.contiguous(), input_x.contiguous(), right=True)
         # print("index:", index.shape)
         # print("max and min index:", torch.max(index), torch.min(index))
         # print("max and min input_x:", torch.max(input_x), torch.min(input_x))
@@ -218,7 +218,7 @@ class CSplineBasic(torch.nn.Module):
             logabsdet (torch.Tensor): Log absolute determinant of the Jacobian of shape (batch_size, dim).
         """
         # check x is in which bin from widths
-        index = torch.searchsorted(heights, input_y, right=True)
+        index = torch.searchsorted(heights.contiguous(), input_y.contiguous(), right=True)
         widths_left_value = torch.gather(widths, 1, index-1) # right value shae: (batch_size, dim)
         widths_right_value = torch.gather(widths, 1, index) # right value shae: (batch_size, dim)
         heights_left_value = torch.gather(heights, 1, index-1)

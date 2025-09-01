@@ -45,13 +45,7 @@ if __name__ == "__main__":
         b_interval= 8
     )
     
-    # define a multi variant gaussian distribution
-    # x_dix = torch.distributions.multivariate_normal.MultivariateNormal(
-    #     loc=torch.zeros(test_dim), 
-    #     covariance_matrix=torch.eye(test_dim)
-    # )
-    
-    # x = x_dix.sample((batch,))  # Sample 5 points from the distribution
+    model.double()
     
     # define a Gaussian Mixture Model
     _x1, _x2, x3 = np.random.rand(batch, test_dim) * 2, np.random.rand(batch, test_dim) * 3+1, np.random.rand(batch, test_dim) * 1.2+5
@@ -180,24 +174,6 @@ if __name__ == "__main__":
             density_sum = density_y[:j+1, :i+1].sum()
             cum_density_y[i, j] = density_sum  * gap_area
             
-    # # plot the density of the output
-    
-    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    # ax.plot_surface(grid_yy0, grid_yy1, density_y, cmap='viridis', edgecolor='none')
-    # plt.title('Density of Output')
-    # plt.xlabel('x')
-    # plt.ylabel('y')
-    # plt.savefig('test/output_density.png')
-    # plt.close()
-    
-    # # plot the density of the output
-    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    # ax.plot_surface(grid_yy0, grid_yy1, cum_density_y, cmap='viridis', edgecolor='none')
-    # plt.title('Cumulative Density of Output')
-    # plt.xlabel('x')
-    # plt.ylabel('y')
-    # plt.savefig('test/output_cumulative_density.png')
-    # plt.close()
     
     # Plot the pdf and cdf in a 3d plot in one figure
     fig = plt.figure(figsize=(14, 6))
