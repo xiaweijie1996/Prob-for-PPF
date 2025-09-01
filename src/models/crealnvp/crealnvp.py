@@ -17,7 +17,6 @@ class CRealnvpBasic(torch.nn.Module):
                  hidden_dim_condition: int = 32,
                  output_dim_condition: int = 1,
                  n_layers_condition: int = 2,
-                 affine: bool = True
                  ):
         
         super(CRealnvpBasic, self).__init__()
@@ -78,10 +77,6 @@ class CRealnvpBasic(torch.nn.Module):
         # Define a special token for null condition
         self.null_token = torch.nn.Parameter(torch.randn(1, self.hidden_dim_condition))
         
-        # define a nn.parameter vector 
-        self.vector = torch.nn.Parameter(torch.randn(1, self.input_dim))
-        self.vectorcontrain = self.adjusted_sigmoid
-    
     def add_pe_and_null_to_c(self, c, index_p, index_v, postional_encoding=False):
         """
         Add positional encoding and null token to the condition vector.
@@ -126,10 +121,6 @@ class CRealnvpBasic(torch.nn.Module):
         
         return c_add.squeeze(-1)  # shape (batch_size, condition_dim +1)
         
-
-    def adjusted_sigmoid(self, x):
-        return torch.sigmoid(x) * 4 - 2  # Adjust the range to [-2, 2]
-    
     def forward(self, x, c, index_p, index_v, postional_encoding=False):
         c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v, postional_encoding=postional_encoding)
         
