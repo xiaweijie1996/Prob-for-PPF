@@ -12,7 +12,7 @@ from sklearn.mixture import GaussianMixture
 
 from src.models.cnice.cnicemodel import CNicemModel
 from src.models.crealnvp.crealnvp import CRealnvpBasic
-from src.models.splinef.cspline import CSplineModel
+from src.models.spline.cspline import CSplineModel
 
 if __name__ == "__main__":
     # Set all tensor Double globally dtyepe
