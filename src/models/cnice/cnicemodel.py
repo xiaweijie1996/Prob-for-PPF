@@ -129,8 +129,8 @@ class CNiceModelBasic(torch.nn.Module):
         x22 = x12 + self.fc1(torch.cat([x11, c_processed], dim=1))
         
         # x3
-        x31 = x22
-        x32 = x21 + self.fc2(torch.cat([x22, c_processed], dim=1))
+        x32 = x22
+        x31 = x21 + self.fc2(torch.cat([x22, c_processed], dim=1))
         
         # Combine the outputs
         x3 = torch.cat([x31, x32], dim=1)
@@ -155,8 +155,8 @@ class CNiceModelBasic(torch.nn.Module):
         x31, x32 = x3[:, :self.split_dim2], x3[:, self.split_dim2:]
         
         # x2
-        x22 = x31
-        x21 = x32 - self.fc2(torch.cat([x31, c_processed], dim=1))
+        x22 = x32
+        x21 = x31 - self.fc2(torch.cat([x32, c_processed], dim=1))
         
         # x1
         x11 = x21
