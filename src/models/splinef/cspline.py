@@ -169,10 +169,6 @@ class CSplineBasic(torch.nn.Module):
         """
         # check x is in which bin from widths
         index = torch.searchsorted(widths, input_x, right=True)
-        print("index:", index.shape)
-        print("max and min index:", torch.max(index), torch.min(index))
-        print("max and min input_x:", torch.max(input_x), torch.min(input_x))
-        print("max and min widths:", torch.max(widths), torch.min(widths))
         widths_left_value = torch.gather(widths, 1, index-1) # right value shae: (batch_size, dim)
         widths_right_value = torch.gather(widths, 1, index) # right value shae: (batch_size, dim)
         heights_left_value = torch.gather(heights, 1, index-1)
@@ -243,28 +239,133 @@ class CSplineBasic(torch.nn.Module):
         
         return output_x, None, None
         
+    def forward_direction(self, x, c, index_p, index_v):
+        """
+        Forward pass of the CSplineBasic model.
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, input_dim).
+            c (torch.Tensor): Condition tensor of shape (batch_size, condition_dim).
+            index_p (int): Index for the positional encoding.
+            index_v (float): Value for the positional encoding.
+        Returns:
+        """
+        c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v)
         
+        # Split the input tensor
+        x11, x12 = x[:, :self.split_dim1], x[:, self.split_dim1:]
+        
+        # x2
+        x21 = x11
+        params1 = self.f1(torch.cat([x11, c_processed], dim=1))
+        widths1, heights1, derivatives1 = self.create_spline_params(params1)
+        x22, ja1, _ = self.spline_transform_forward(x12, widths1, heights1, derivatives1)
+        
+        # x3
+        x32 = x22
+        params2 = self.f2(torch.cat([x22, c_processed], dim=1))
+        widths2, heights2, derivatives2 = self.create_spline_params(params2)
+        x31, ja2, _ = self.spline_transform_forward(x21, widths2, heights2, derivatives2)
+        
+        # Combine the outputs
+        x3 = torch.cat([x31, x32], dim=1)
+        ja = ja1 * ja2
+        
+        return x3, ja
+    
+    def inverse_direction(self, y, c, index_p, index_v):
+        """
+        Inverse pass of the CSplineBasic model.
+        Args:
+            y (torch.Tensor): Input tensor of shape (batch_size, input_dim).
+            c (torch.Tensor): Condition tensor of shape (batch_size, condition_dim).
+            index_p (int): Index for the positional encoding.
+            index_v (float): Value for the positional encoding.
+        Returns:
+        """
+        c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v)
+        # Split the input tensor
+        y31, y32 = y[:, :self.split_dim1], y[:, self.split_dim1:]
+        
+        # x2
+        y22 = y32
+        params2 = self.f2(torch.cat([y32, c_processed], dim=1))
+        widths2, heights2, derivatives2 = self.create_spline_params(params2)
+        y21, _, _ = self.spline_transform_reverse(y31, widths2, heights2, derivatives2)
+        
+        # x1
+        y11 = y21
+        params1 = self.f1(torch.cat([y21, c_processed], dim=1))
+        widths1, heights1, derivatives1 = self.create_spline_params(params1)
+        y12, _, _ = self.spline_transform_reverse(y22, widths1, heights1, derivatives1)
+        
+        # Combine the outputs
+        y1 = torch.cat([y11, y12], dim=1)
+        
+        return y1, None
+    
+class CSplineModel(torch.nn.Module):
+    def __init__(self, 
+                 input_dim: int = 2,
+                 hidden_dim: int = 64,
+                 condition_dim: int = 12,
+                 n_layers: int = 1,
+                 split_ratio: float = 0.5,
+                 n_blocks: int = 2,
+                 hidden_dim_condition: int = 32,
+                 output_dim_condition: int = 1,
+                 n_layers_condition: int = 2,
+                 b_interval: float = 5.0,
+                 k_bins: int = 10
+                ):
+        super(CSplineModel, self).__init__()
+        
+        self.blocks = torch.nn.ModuleList([
+            CSplineBasic(
+                input_dim=input_dim,
+                hidden_dim=hidden_dim,
+                condition_dim=condition_dim,
+                n_layers=n_layers,
+                split_ratio=split_ratio,
+                hidden_dim_condition=hidden_dim_condition,
+                n_layers_condition=n_layers_condition,
+                b_interval=b_interval,
+                k_bins=k_bins
+            ) for _ in range(n_blocks)
+        ])
+    
+    def forward(self, x, c, index_p, index_v):
+        ja = torch.ones((x.shape[0]), device=x.device)
+        for block in self.blocks:
+            x, ja_block = block.forward_direction(x, c, index_p=index_p, index_v=index_v)
+            ja = ja * ja_block.squeeze(-1)
+        return x, ja
+    
+    def inverse(self, y, c, index_p, index_v):
+        for block in reversed(self.blocks):
+            y, _ = block.inverse_direction(y, c, index_p=index_p, index_v=index_v)
+        return y, _
                          
 if __name__ == "__main__":
-    model = CSplineBasic(k_bins=10)
-    x = torch.randn(500, 2)
-    c = torch.randn(500, 128)
+    test_dim = 2
+    c_dim = 100
+    index_v = 1
+    index_p = 2
+    k_bins = 10
+    model = CSplineModel(
+        input_dim=test_dim,
+        condition_dim=c_dim,
+        n_blocks=3,
+        k_bins=k_bins
+    )
+    x = torch.randn(500, test_dim)
+    c = torch.randn(500, c_dim)
     index_p = 3
     index_v = 0.5
-    
-    _params = torch.randn(500, model.k_bins * 3 -1)
-    widths, heights, derivatives = model.create_spline_params(_params)
-    print("widths:", widths.shape)
-    # print("heights:", heights)
-    
-    y, ja, pd = model.spline_transform_forward(x, widths, heights, derivatives)
+    y, ja = model.forward(x, c, index_p=index_p, index_v=index_v)
     print("y:", y.shape)
-    print("ja:", ja.mean().item())
-    print("pd:", pd.shape)
-
-    # inverse
-    x_recon, _, _ = model.spline_transform_reverse(y, widths, heights, derivatives)
+    print("ja:", ja.shape)
+    x_recon, _ = model.inverse(y, c, index_p=index_p, index_v=index_v)
     print("x_recon:", x_recon.shape)
-    print("x:", x.shape)
     print("Difference:", (x - x_recon).mean().item())
     print( torch.allclose(x, x_recon, atol=1e-3))
+    
