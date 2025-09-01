@@ -182,7 +182,6 @@ class CNicemModel(torch.nn.Module):
                  ):
         super(CNicemModel, self).__init__()
         
-        self.input_dim = input_dim
         self.basic_collection = torch.nn.ModuleList([
             CNiceModelBasic(
                 input_dim=input_dim,

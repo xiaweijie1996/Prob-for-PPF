@@ -182,27 +182,69 @@ class CRealnvpBasic(torch.nn.Module):
         
         return x, det_ja
     
+class CRealnvpModel(torch.nn.Module):
+    def __init__(self, 
+                 input_dim: int = 2,
+                 hidden_dim: int = 64,
+                 condition_dim: int = 12,
+                 n_layers: int = 1,
+                 split_ratio: float = 0.5,
+                 n_blocks: int = 2,
+                 hidden_dim_condition: int = 32,
+                 output_dim_condition: int = 1,
+                 n_layers_condition: int = 2
+                 ):
+        super(CRealnvpModel, self).__init__()
+        
+        self.blocks = torch.nn.ModuleList([
+            CRealnvpBasic(
+                input_dim=input_dim,
+                hidden_dim=hidden_dim,
+                condition_dim=condition_dim,
+                n_layers=n_layers,
+                split_ratio=split_ratio,
+                hidden_dim_condition=hidden_dim_condition,
+                output_dim_condition=output_dim_condition,
+                n_layers_condition=n_layers_condition
+            ) for _ in range(n_blocks)
+        ])
+        
+    def forward(self, x, c, index_p, index_v, postional_encoding=False):
+        ja = torch.ones((x.shape[0]), device=x.device)
+        for block in self.blocks:
+            x, _ja = block.forward(x, c, index_p=index_p, index_v=index_v, postional_encoding=postional_encoding)
+            ja = ja * _ja
+        return x, ja
+    
+    def inverse(self, x, c, index_p, index_v, postional_encoding=False):
+        ja = torch.ones((x.shape[0]), device=x.device)
+        for block in reversed(self.blocks):
+            x, _ja = block.inverse(x, c, index_p=index_p, index_v=index_v, postional_encoding=postional_encoding)
+            ja = ja * _ja
+        return x, ja
+    
 if __name__ == "__main__":
     # Example usage
     test_dim = 2
     c_dim = 100
     index_v = 1
     index_p = 2
+    batch_size = 400
     
-    model = CRealnvpBasic(input_dim=test_dim, condition_dim=c_dim)
-    x = torch.randn(4, test_dim)
-    c = torch.randn(4, c_dim)
+    model = CRealnvpModel(
+        input_dim=test_dim,
+        condition_dim=c_dim,
+        n_blocks=3
+    )
+    x = torch.randn(batch_size, test_dim)
+    c = torch.randn(batch_size, c_dim)
     
     # Forward pass
     y, ja = model.forward(x, c, index_p=index_p, index_v=index_v)
-    print("Output y:", y)
-    print("Jacobian determinant:", ja)
-    
     # Inverse pass
     x_recon, ja_inv = model.inverse(y, c, index_p=index_p, index_v=index_v)
-    print("Reconstructed x:", x_recon)
-    print("Inverse Jacobian determinant:", ja_inv)
-    
+
     # Check if reconstruction is close to original
+    print("Original x.shape:", x.shape, "Reconstructed x.shape:", x_recon.shape, "Jacobian shape:", ja.shape)
     print("Reconstruction error:", torch.norm(x - x_recon))
     print(torch.allclose(x, x_recon, atol=1e-5))
