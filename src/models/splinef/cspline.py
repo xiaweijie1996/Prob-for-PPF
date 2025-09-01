@@ -6,6 +6,9 @@ sys.path.append(_parent_dir)
 
 import torch
 import src.models.basicnetwork.basicnets as basicnets
+ 
+# Set all tensor Double globally dtyepe
+torch.set_default_dtype(torch.float64)
 
 class CSplineBasic(torch.nn.Module):
     def __init__(self, 
@@ -17,7 +20,7 @@ class CSplineBasic(torch.nn.Module):
                  # model features main
                  n_layers: int = 3,
                  split_ratio: float = 0.6,
-                 b_interval: float = 3.0, # better to max of the output data maybe
+                 b_interval: float = 5.0, # better to max of the output data maybe
                  k_bins: int = 10, # number of bins
                  
                  # model features condition
@@ -166,6 +169,10 @@ class CSplineBasic(torch.nn.Module):
         """
         # check x is in which bin from widths
         index = torch.searchsorted(widths, input_x, right=True)
+        print("index:", index.shape)
+        print("max and min index:", torch.max(index), torch.min(index))
+        print("max and min input_x:", torch.max(input_x), torch.min(input_x))
+        print("max and min widths:", torch.max(widths), torch.min(widths))
         widths_left_value = torch.gather(widths, 1, index-1) # right value shae: (batch_size, dim)
         widths_right_value = torch.gather(widths, 1, index) # right value shae: (batch_size, dim)
         heights_left_value = torch.gather(heights, 1, index-1)
@@ -239,25 +246,25 @@ class CSplineBasic(torch.nn.Module):
         
                          
 if __name__ == "__main__":
-    model = CSplineBasic(k_bins=2)
-    x = torch.randn(2, 2)
-    c = torch.randn(2, 128)
+    model = CSplineBasic(k_bins=10)
+    x = torch.randn(500, 2)
+    c = torch.randn(500, 128)
     index_p = 3
     index_v = 0.5
     
-    _params = torch.randn(2, model.k_bins * 3 -1)
+    _params = torch.randn(500, model.k_bins * 3 -1)
     widths, heights, derivatives = model.create_spline_params(_params)
-    print("widths:", widths)
+    print("widths:", widths.shape)
     # print("heights:", heights)
     
     y, ja, pd = model.spline_transform_forward(x, widths, heights, derivatives)
-    print("y:", y)
-    print("ja:", ja)
-    print("pd:", pd)
+    print("y:", y.shape)
+    print("ja:", ja.mean().item())
+    print("pd:", pd.shape)
 
     # inverse
     x_recon, _, _ = model.spline_transform_reverse(y, widths, heights, derivatives)
-    print("x_recon:", x_recon)
-    print("x:", x)
-    print("Difference:", x - x_recon)
-    print( torch.allclose(x, x_recon, atol=1e-5))
+    print("x_recon:", x_recon.shape)
+    print("x:", x.shape)
+    print("Difference:", (x - x_recon).mean().item())
+    print( torch.allclose(x, x_recon, atol=1e-3))
