@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from sklearn.mixture import GaussianMixture
 
 from src.models.cnice.cnicemodel import CNicemModel
+from src.models.crealnvp.crealnvp import CRealnvpBasic
 
 if __name__ == "__main__":
     # Test CNiceModelBasic
@@ -18,9 +19,16 @@ if __name__ == "__main__":
     c_dim = 10
     index_v = 1
     index_p = 1
-    batch = 1000
+    batch = 10000
+    n_bins = 50
     
-    nicem_model = CNicemModel(input_dim=test_dim, n_layers=1, split_ratio=0.5, n_blocks=2, 
+    # ---- model init cnice----
+    # model = CNicemModel(input_dim=test_dim, n_layers=1, split_ratio=0.5, n_blocks=2, 
+    #                         hidden_dim=64, condition_dim=c_dim, 
+    #                         hidden_dim_condition=32, output_dim_condition=1, n_layers_condition=2)
+    
+    # ---- model init crealnvp----
+    model = CRealnvpBasic(input_dim=test_dim, n_layers=1, split_ratio=0.5,
                             hidden_dim=64, condition_dim=c_dim, 
                             hidden_dim_condition=32, output_dim_condition=1, n_layers_condition=2)
     
@@ -51,7 +59,7 @@ if __name__ == "__main__":
     
     # input = torch.cat((x, x), dim=1)
     # print("Input shape:", input.shape)
-    output, _ja = nicem_model.forward(x, c, index_p=index_p, index_v=index_v)
+    output, _ja = model.forward(x, c, index_p=index_p, index_v=index_v)
     print("Output shape:", output.shape)
     print("Jacobian determinant shape:", _ja.shape)
     
@@ -65,7 +73,7 @@ if __name__ == "__main__":
     max_y0, min_y0 = y[:,0].max().item(), y[:,0].min().item()
     max_y1, min_y1 = y[:,1].max().item(), y[:,1].min().item()
     
-    n_bins = int(np.sqrt(batch))  # Number of bins for the histogram
+    # Number of bins for the histogram
     y0_line = np.linspace(min_y0, max_y0, n_bins)
     y1_line = np.linspace(min_y1, max_y1, n_bins)
     gap_area = (max_y0 - min_y0) * (max_y1 - min_y1) / (n_bins * n_bins)
@@ -121,7 +129,7 @@ if __name__ == "__main__":
     plt.close()
         
     # Check the inverse function
-    x_inverse, _ja_inverse = nicem_model.inverse(output, c, index_p=index_p, index_v=index_v)
+    x_inverse, _ja_inverse = model.inverse(output, c, index_p=index_p, index_v=index_v)
     # check if the inversed out is the same as the input
     print("Are the original and inversed outputs close?", torch.allclose(x, x_inverse, atol=1e-6))
     # p_y_compute = x_dix.log_prob(x_inverse).exp() * _ja_inverse
@@ -137,7 +145,7 @@ if __name__ == "__main__":
             _batch_index += 1
     print("Input y shape:", _input_y.shape)
     c = torch.ones(n_bins* n_bins, c_dim)  # Condition vector for inverse
-    x_inverse, _ja_inverse = nicem_model.inverse(_input_y, c, index_p=index_p, index_v=index_v)
+    x_inverse, _ja_inverse = model.inverse(_input_y, c, index_p=index_p, index_v=index_v)
     
     # p_y_compute = x_dix.log_prob(x_inverse).exp() * _ja_inverse
     p_y_compute = gmm.score_samples(x_inverse.detach().numpy())
@@ -147,17 +155,9 @@ if __name__ == "__main__":
     _batch_index = 0
     for i in range(n_bins):
         for j in range(n_bins):
-            density_y[i, j] = p_y_compute[_batch_index].item()
+            density_y[j, i] = p_y_compute[_batch_index].item()
             _batch_index += 1
     
-    # plot the density of the output
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    ax.plot_surface(grid_yy0, grid_yy1, density_y, cmap='viridis', edgecolor='none')
-    plt.title('Density of Output')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.savefig('test/output_density.png')
-    plt.close()
 
     # Plot the cdf computed from the density
     cum_density_y = torch.zeros((n_bins, n_bins))
@@ -165,13 +165,43 @@ if __name__ == "__main__":
         for j in range(n_bins):
             # sum over all bins less than or equal to (i, j)
             density_sum = density_y[:j+1, :i+1].sum()
-            cum_density_y[j, i] = density_sum  * gap_area
+            cum_density_y[i, j] = density_sum  * gap_area
+            
+    # # plot the density of the output
     
-    # plot the density of the output
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    ax.plot_surface(grid_yy0, grid_yy1, cum_density_y, cmap='viridis', edgecolor='none')
-    plt.title('Cumulative Density of Output')
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.savefig('test/output_cumulative_density.png')
+    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    # ax.plot_surface(grid_yy0, grid_yy1, density_y, cmap='viridis', edgecolor='none')
+    # plt.title('Density of Output')
+    # plt.xlabel('x')
+    # plt.ylabel('y')
+    # plt.savefig('test/output_density.png')
+    # plt.close()
+    
+    # # plot the density of the output
+    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    # ax.plot_surface(grid_yy0, grid_yy1, cum_density_y, cmap='viridis', edgecolor='none')
+    # plt.title('Cumulative Density of Output')
+    # plt.xlabel('x')
+    # plt.ylabel('y')
+    # plt.savefig('test/output_cumulative_density.png')
+    # plt.close()
+    
+    # Plot the pdf and cdf in a 3d plot in one figure
+    fig = plt.figure(figsize=(14, 6))
+    # First subplot: PDF
+    ax1 = fig.add_subplot(1, 2, 1, projection='3d')
+    ax1.plot_surface(grid_yy0, grid_yy1, density_y, cmap='viridis', edgecolor='none')
+    ax1.set_title('Computed PDF of Output')
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('y')
+    ax1.set_zlabel('Density')
+    # Second subplot: CDF
+    ax2 = fig.add_subplot(1, 2, 2, projection='3d')
+    ax2.plot_surface(grid_yy0, grid_yy1, cum_density_y, cmap='viridis', edgecolor='none')
+    ax2.set_title('Computed CDF of Output')
+    ax2.set_xlabel('x')
+    ax2.set_ylabel('y')
+    ax2.set_zlabel('Cumulative Density')
+    plt.tight_layout()
+    plt.savefig('test/output_computed_pdf_cdf.png')
     plt.close()
