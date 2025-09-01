@@ -169,6 +169,10 @@ class CSplineBasic(torch.nn.Module):
         """
         # check x is in which bin from widths
         index = torch.searchsorted(widths, input_x, right=True)
+        # print("index:", index.shape)
+        # print("max and min index:", torch.max(index), torch.min(index))
+        # print("max and min input_x:", torch.max(input_x), torch.min(input_x))
+        # print("max and min widths:", torch.max(widths), torch.min(widths))
         widths_left_value = torch.gather(widths, 1, index-1) # right value shae: (batch_size, dim)
         widths_right_value = torch.gather(widths, 1, index) # right value shae: (batch_size, dim)
         heights_left_value = torch.gather(heights, 1, index-1)
@@ -351,14 +355,15 @@ if __name__ == "__main__":
     index_v = 1
     index_p = 2
     k_bins = 10
+    batch_size = 400
     model = CSplineModel(
         input_dim=test_dim,
         condition_dim=c_dim,
-        n_blocks=3,
+        n_blocks=1,
         k_bins=k_bins
     )
-    x = torch.randn(500, test_dim)
-    c = torch.randn(500, c_dim)
+    x = torch.randn(batch_size, test_dim)
+    c = torch.randn(batch_size, c_dim)
     index_p = 3
     index_v = 0.5
     y, ja = model.forward(x, c, index_p=index_p, index_v=index_v)

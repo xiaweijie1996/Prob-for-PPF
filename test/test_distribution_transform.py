@@ -12,8 +12,13 @@ from sklearn.mixture import GaussianMixture
 
 from src.models.cnice.cnicemodel import CNicemModel
 from src.models.crealnvp.crealnvp import CRealnvpBasic
+from src.models.splinef.cspline import CSplineModel
 
 if __name__ == "__main__":
+    # Set all tensor Double globally dtyepe
+    torch.set_default_dtype(torch.float64)
+
+
     # Test CNiceModelBasic
     test_dim = 2
     c_dim = 10
@@ -28,9 +33,17 @@ if __name__ == "__main__":
     #                         hidden_dim_condition=32, output_dim_condition=1, n_layers_condition=2)
     
     # ---- model init crealnvp----
-    model = CRealnvpBasic(input_dim=test_dim, n_layers=1, split_ratio=0.5,
-                            hidden_dim=64, condition_dim=c_dim, 
-                            hidden_dim_condition=32, output_dim_condition=1, n_layers_condition=2)
+    # model = CRealnvpBasic(input_dim=test_dim, n_layers=1, split_ratio=0.5,
+    #                         hidden_dim=64, condition_dim=c_dim, 
+    #                         hidden_dim_condition=32, output_dim_condition=1, n_layers_condition=2)
+    # ---- model init cspline----
+    model = CSplineModel(
+        input_dim=test_dim,
+        condition_dim=c_dim,
+        n_blocks=3,
+        k_bins=10,
+        b_interval= 8
+    )
     
     # define a multi variant gaussian distribution
     # x_dix = torch.distributions.multivariate_normal.MultivariateNormal(
@@ -45,7 +58,7 @@ if __name__ == "__main__":
     _x = np.concatenate((_x1, _x2, x3), axis=0)
     gmm = GaussianMixture(n_components=4, covariance_type='full')
     gmm.fit(_x)
-    x = torch.tensor(gmm.sample(batch)[0], dtype=torch.float32)  # Sample from GMM
+    x = torch.tensor(gmm.sample(batch)[0])  # Sample from GMM
     
     # Plot distribution of x
     plt.figure(figsize=(8, 6))
@@ -59,9 +72,9 @@ if __name__ == "__main__":
     
     # input = torch.cat((x, x), dim=1)
     # print("Input shape:", input.shape)
-    output, _ja = model.forward(x, c, index_p=index_p, index_v=index_v)
+    output, _ja = model.inverse(x, c, index_p=index_p, index_v=index_v)
     print("Output shape:", output.shape)
-    print("Jacobian determinant shape:", _ja.shape)
+    # print("Jacobian determinant shape:", _ja.shape)
     
     # f(x) = y
     # p(x) = p(y) * |det(d f^-1(y)/ dy)|
@@ -129,7 +142,7 @@ if __name__ == "__main__":
     plt.close()
         
     # Check the inverse function
-    x_inverse, _ja_inverse = model.inverse(output, c, index_p=index_p, index_v=index_v)
+    x_inverse, _ja_inverse = model.forward(output, c, index_p=index_p, index_v=index_v)
     # check if the inversed out is the same as the input
     print("Are the original and inversed outputs close?", torch.allclose(x, x_inverse, atol=1e-6))
     # p_y_compute = x_dix.log_prob(x_inverse).exp() * _ja_inverse
@@ -145,7 +158,7 @@ if __name__ == "__main__":
             _batch_index += 1
     print("Input y shape:", _input_y.shape)
     c = torch.ones(n_bins* n_bins, c_dim)  # Condition vector for inverse
-    x_inverse, _ja_inverse = model.inverse(_input_y, c, index_p=index_p, index_v=index_v)
+    x_inverse, _ja_inverse = model.forward(_input_y, c, index_p=index_p, index_v=index_v)
     
     # p_y_compute = x_dix.log_prob(x_inverse).exp() * _ja_inverse
     p_y_compute = gmm.score_samples(x_inverse.detach().numpy())
