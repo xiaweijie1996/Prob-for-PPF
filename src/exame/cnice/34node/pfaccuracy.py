@@ -41,16 +41,15 @@ hiddemen_dim_condition = config['CNice']['hiddemen_dim_condition']
 output_dim_condition = config['CNice']['output_dim_condition']
 n_layers_condition = config['CNice']['n_layers_condition']
 
-batch_size_gen = config['CNice']['batch_size']  # Use a larger batch size for evaluation
+batch_size = config['CNice']['batch_size'] * 10  # Use a larger batch size for evaluation
 epochs = config['CNice']['epochs']
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 save_path = config['CNice']['save_path']
 
 p_index = 12 # torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
 v_index = p_index
-n_bins = 10  # Number of bins for the pdf and cdf plot
-_iter = 10  # Number of iterations to collect data for pdf and cdf plot
-batch_size = _iter  * batch_size_gen
+n_bins = 15  # Number of bins for the pdf and cdf plot
+
 # -----------------------
 # Initialize the random system　model and scalers
 # -----------------------
@@ -93,70 +92,48 @@ gmm_p_index.covariances_ = gmm.covariances_[:, [p_index, p_index + num_nodes - 1
 gmm_p_index.weights_ = gmm.weights_
 gmm_p_index.precisions_cholesky_ = np.linalg.cholesky(np.linalg.inv(gmm_p_index.covariances_))
 
-input_x_collect = []
-input_c_collect = []
-output_y_collect = []
-pre_p_collect = []
-pre_v_collect = []
-_jai_collect = []
+# -----------------------    
+# Define the data
+# -----------------------
+power_sample = gmm.sample(batch_size)[0]
+print(f"Sampled power shape: {power_sample.shape}")  # (batch_size, 2*(num_nodes-1))
+print(f"Power sample statistics: mean {power_sample.mean()}, std {power_sample.std()}")
+active_power = power_sample[:, :num_nodes-1]
+reactive_power = power_sample[:, num_nodes-1:]
 
-for _i in range(_iter):
-    # -----------------------    
-    # Define the data
-    # -----------------------
-    power_sample = gmm.sample(batch_size_gen)[0]
-    print(f"Sampled power shape: {power_sample.shape}")  # (batch_size, 2*(num_nodes-1))
-    print(f"Power sample statistics: mean {power_sample.mean()}, std {power_sample.std()}")
-    active_power = power_sample[:, :num_nodes-1]
-    reactive_power = power_sample[:, num_nodes-1:]
+_solution = random_sys.run(active_power=active_power, 
+                            reactive_power=reactive_power)
+voltage_magnitudes = magnitude_transform(_solution['v'])
+voltage_angles = angle_transform(_solution['v'])
 
-    _solution = random_sys.run(active_power=active_power, 
-                                reactive_power=reactive_power)
-    voltage_magnitudes = magnitude_transform(_solution['v'])
-    voltage_angles = angle_transform(_solution['v'])
+# Scale voltage and power using loaded scalers
+scaled_voltage_magnitudes = (voltage_magnitudes - scaler['mean_voltage_magnitude']) / scaler['std_voltage_magnitude']
+scaled_voltage_angles = (voltage_angles - scaler['mean_voltage_angle']) / scaler['std_voltage_angle']
+scaled_active_power = (active_power - scaler['mean_active_power']) / scaler['std_active_power']
+scaled_reactive_power = (reactive_power - scaler['mean_reactive_power']) / scaler['std_reactive_power']
 
-    # Scale voltage and power using loaded scalers
-    scaled_voltage_magnitudes = (voltage_magnitudes - scaler['mean_voltage_magnitude']) / scaler['std_voltage_magnitude']
-    scaled_voltage_angles = (voltage_angles - scaler['mean_voltage_angle']) / scaler['std_voltage_angle']
-    scaled_active_power = (active_power - scaler['mean_active_power']) / scaler['std_active_power']
-    scaled_reactive_power = (reactive_power - scaler['mean_reactive_power']) / scaler['std_reactive_power']
+# Concat the scaled data
+concat_vm_va = np.hstack((scaled_voltage_magnitudes, scaled_voltage_angles))
+concat_active_reactive = np.hstack((scaled_active_power, scaled_reactive_power))
 
-    # Concat the scaled data
-    concat_vm_va = np.hstack((scaled_voltage_magnitudes, scaled_voltage_angles))
-    concat_active_reactive = np.hstack((scaled_active_power, scaled_reactive_power))
+# ----------------------- 
+# Evaluate the model point estimate accuracy
+# ----------------------- 
+input_power = torch.tensor(concat_active_reactive, device=device, dtype=torch.float32)
+target_voltage = torch.tensor(concat_vm_va, device=device, dtype=torch.float32)
 
-    # ----------------------- 
-    # Evaluate the model point estimate accuracy
-    # ----------------------- 
-    input_power = torch.tensor(concat_active_reactive, device=device, dtype=torch.float32)
-    target_voltage = torch.tensor(concat_vm_va, device=device, dtype=torch.float32)
-
-    input_x = torch.cat((input_power[:, p_index].unsqueeze(1), input_power[:, p_index+num_nodes-1].unsqueeze(1)), dim=1)  # shape (batch_size, 2)
-    input_c = input_power.clone()
-    output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
-                        target_voltage[:, v_index+num_nodes-1].unsqueeze(1)), dim=1)
-    nice_model.eval()
-    with torch.no_grad():
-        pre_v, _jaf = nice_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
-        pre_p, _jai = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
-        
-    pre_v = pre_v.cpu().numpy()
-    pre_p = pre_p.cpu().numpy()
-
-    # Collect the results
-    input_x_collect.append(input_x.cpu().numpy())
-    input_c_collect.append(input_c.cpu().numpy())
-    output_y_collect.append(output_y.cpu().numpy())
-    pre_p_collect.append(pre_p)
-    pre_v_collect.append(pre_v)
-    _jai_collect.append(_jai.cpu().numpy().reshape(-1, 1))
+input_x = torch.cat((input_power[:, p_index].unsqueeze(1), input_power[:, p_index+num_nodes-1].unsqueeze(1)), dim=1)  # shape (batch_size, 2)
+input_c = input_power.clone()
+output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
+                    target_voltage[:, v_index+num_nodes-1].unsqueeze(1)), dim=1)
+nice_model.eval()
+with torch.no_grad():
+    pre_v, _jaf = nice_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
+    pre_p, _jai = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
     
-input_x = torch.tensor(np.vstack(input_x_collect), device=device, dtype=torch.float32)
-input_c = torch.tensor(np.vstack(input_c_collect), device=device, dtype=torch.float32)
-output_y = torch.tensor(np.vstack(output_y_collect), device=device, dtype=torch.float32)
-pre_p = np.vstack(pre_p_collect)
-pre_v = np.vstack(pre_v_collect)
-_jai = torch.tensor(np.vstack(_jai_collect), device=device, dtype=torch.float32)
+pre_v = pre_v.cpu().numpy()
+pre_p = pre_p.cpu().numpy()
+
 
 # Plot the pre_v and pre_p and real and target
 plt.figure(figsize=(12, 6))

@@ -100,9 +100,6 @@ def main():
         active_power = power_sample[:, :num_nodes-1]
         reactive_power = power_sample[:, num_nodes-1:]
      
-        # log mean of average active power and reactive power
-        # wb.log({"Mean Active Power": np.mean(active_power), "Mean Reactive Power": np.mean(reactive_power)})
-        # print(f"Mean Active Power: {np.mean(active_power)}, Mean Reactive Power: {np.mean(reactive_power)}")
         # Run the power flow analysis
         solution = random_sys.run(active_power=active_power, 
                                     reactive_power=reactive_power)
