@@ -6,20 +6,23 @@ SystemAndDistribution:
   batch_size: 20000
   n_components: 5 # number of Gaussian components
   dis_path: 'src/powersystems/psdistribution/34node/gmm_power.pkl'
-  sacler_path: 'src/powersystems/psdistribution/34node/scalers.pkl'
+  scaler_path: 'src/powersystems/psdistribution/34node/scalers.pkl'
   mean_vector_start: 50
 
-NICE:
-  # 
-  num_nodes: 34
-  num_children: 3
-  power_factor: 0.2
-
-  split_ratio: 0.6
-  n_blocks: 4
-  hiddemen_dim: 256
-  n_layers: 2
-  full_dim: 66  # (num_nodes - 1) * 2
-
-  batch_size: 500
-  epochs: 2000
+CNice:
+  # Model parameters
+  split_ratio:  0.5
+  n_blocks:  4
+  hiddemen_dim:  256
+  c_dim:  66
+  n_layers:  4
+  input_dim:  2  # Assuming each node has a real and imaginary part
+  hiddemen_dim_condition:  256
+  output_dim_condition:  1
+  n_layers_condition:  3
+  
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  1000
+  epochs:  100000000
+  save_path:  'src/training/cnice/savedmodel'
