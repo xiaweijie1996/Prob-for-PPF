@@ -4,9 +4,7 @@ _parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'
 print(_parent_dir)
 sys.path.append(_parent_dir)
 
-import torch
 import numpy as np
-import wandb as wb
 import pickle 
 import yaml
 from sklearn.mixture import GaussianMixture
@@ -62,11 +60,13 @@ def main():
     
     gmm_power = GaussianMixture(n_components=n_components, covariance_type='full', random_state=0)
     gmm_power.fit(power_data)
+    
     # print covariances and means
     # print(f"GMM Power Means: {gmm_power.means_}, Covariances: {gmm_power.covariances_}")
     samples = gmm_power.sample(batch_size)[0]
     _active_power_sampled = samples[:, :num_nodes-1]
     _reactive_power_sampled = samples[:, num_nodes-1:]
+    print("mean of sampled active power:", np.mean(_active_power_sampled))
     
     _solution_sampled = random_sys.run(active_power=_active_power_sampled,
                                         reactive_power=_reactive_power_sampled)

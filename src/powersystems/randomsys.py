@@ -22,7 +22,7 @@ class randomsystem:
         self.plot_graph = plot_graph
     
         # Generate a system
-        np.random.seed(42) 
+        # np.random.seed(42) 
         self.network_rnd = GridTensor.generate_from_graph(
             nodes=self.num_nodes,
             child=self.num_children,
