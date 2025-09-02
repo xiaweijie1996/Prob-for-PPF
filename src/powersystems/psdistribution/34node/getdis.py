@@ -58,7 +58,7 @@ def main():
     print(f"Power data shape: {power_data.shape}, Voltage data shape: {voltage_data.shape}")
     print(f"voltage magnitude example: {_voltage_magnitudes.shape}")
     
-    gmm_power = GaussianMixture(n_components=n_components, covariance_type='full', random_state=0)
+    gmm_power = GaussianMixture(n_components=n_components, covariance_type='full')
     gmm_power.fit(power_data)
     
     # print covariances and means
