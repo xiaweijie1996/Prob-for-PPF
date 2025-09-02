@@ -17,17 +17,22 @@ from src.powersystems.randomsys import  magnitude_transform, angle_transform
 def main():
     # Configureation
     # -----------------------
-    num_nodes = 34
-    power_factor = 0.2
-    std = 10
-    save_path = 'src/powersystems/psdistribution/34node'
-    batch_size = 20000
-    n_components = 5
+    # import config
+    with open('src/config34node.yaml', 'r') as f:
+        config = yaml.safe_load(f)
+    
+    num_nodes = config['SystemAndDistribution']['node']
+    power_factor = config['SystemAndDistribution']['power_factor']
+    std = config['SystemAndDistribution']['std']
+    save_path = config['SystemAndDistribution']['save_path']
+    batch_size = config['SystemAndDistribution']['batch_size']
+    n_components = config['SystemAndDistribution']['n_components']
+    mean_vector_start = config['SystemAndDistribution']['mean_vector_start']
     # -----------------------
     
     # Initialize the random system
     random_sys = Node34Example()
-    mean_vector = [50 + i*1 for i in range(num_nodes)]  # Example mean vector
+    mean_vector = [mean_vector_start + i*1 for i in range(num_nodes)]  # Example mean vector
     mean_vector = np.array(mean_vector)
     print(f"Mean vector: {mean_vector[1:].shape}, {mean_vector[1:]}")
     
@@ -57,7 +62,7 @@ def main():
     gmm_power = GaussianMixture(n_components=n_components, covariance_type='full', random_state=0)
     gmm_power.fit(power_data)
     # print covariances and means
-    print(f"GMM Power Means: {gmm_power.means_}, Covariances: {gmm_power.covariances_}")
+    # print(f"GMM Power Means: {gmm_power.means_}, Covariances: {gmm_power.covariances_}")
     
     # Save GMM model
     gmm_path = os.path.join(save_path, 'gmm_power.pkl')
