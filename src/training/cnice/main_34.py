@@ -175,7 +175,7 @@ def main():
         })
         
         # Save the model every 100 epochs
-        if (_ + 1) >200 and end_loss > loss_forward.item():
+        if (_ + 1) >100 and end_loss > loss_forward.item():
             end_loss = loss_forward.item()
             torch.save(nice_model.state_dict(), os.path.join(save_path, f"cnicemodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
@@ -183,32 +183,34 @@ def main():
             # Plot the output vs target for power and voltage for the current p_index
             pre_power = output_power.cpu().detach().numpy()
             true_power = input_x.cpu().detach().numpy()
-            plt.figure(figsize=(12, 5))
-            plt.subplot(1, 2, 1)
-            plt.scatter(true_power[:, 0], true_power[:, 1], label='True Power', alpha=0.1)
-            plt.scatter(pre_power[:, 0], pre_power[:, 1], label='Predicted Power', alpha=0.1)
-            plt.title(f'Active vs Reactive Power at Node {p_index+1}')
-            plt.xlabel('Active Power (P)')
-            plt.ylabel('Reactive Power (Q)')
-            plt.legend()
-            plt.axis('equal')
-            
             pre_voltage = output_voltage.cpu().detach().numpy()
             true_voltage = output_y.cpu().detach().numpy()
-            plt.subplot(1, 2, 2)
-            plt.scatter(true_voltage[:, 0], true_voltage[:, 1], label='True Voltage', alpha=0.1)
-            plt.scatter(pre_voltage[:, 0], pre_voltage[:, 1], label='Predicted Voltage', alpha=0.1)
-            plt.title(f'Voltage Magnitude vs Angle at Node {v_index+1}')
-            plt.xlabel('Voltage Magnitude (|V|)')
-            plt.ylabel('Voltage Angle (θ)')
-            plt.legend()
-            plt.axis('equal')
-            # plt.tight_layout()
-            plt.savefig(f'src/training/cnice/savedmodel/cnice_gen.png')
-            plt.close()
-            wb.log({"cnice_gen": plt})
             
-            
+            fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+            axes[0].scatter(true_power[:, 0], true_power[:, 1], label='True Power', alpha=0.1)
+            axes[0].scatter(pre_power[:, 0], pre_power[:, 1], label='Predicted Power', alpha=0.1)
+            axes[0].set_title(f'Active vs Reactive Power at Node {p_index+1}')
+            axes[0].set_xlabel('Active Power (P)')
+            axes[0].set_ylabel('Reactive Power (Q)')
+            axes[0].legend()
+            axes[0].axis('equal')
+
+            axes[1].scatter(true_voltage[:, 0], true_voltage[:, 1], label='True Voltage', alpha=0.1)
+            axes[1].scatter(pre_voltage[:, 0], pre_voltage[:, 1], label='Predicted Voltage', alpha=0.1)
+            axes[1].set_title(f'Voltage Magnitude vs Angle at Node {v_index+1}')
+            axes[1].set_xlabel('Voltage Magnitude (|V|)')
+            axes[1].set_ylabel('Voltage Angle (θ)')
+            axes[1].legend()
+            axes[1].axis('equal')
+
+            fig.tight_layout()
+            fig.savefig('src/training/cnice/savedmodel/cnice_gen.png')
+
+            # ✅ log the figure object, not `plt`
+            wb.log({"cnice_gen": fig})
+
+            plt.close(fig)   # close after logging
+
            
            
 if __name__ == "__main__":
