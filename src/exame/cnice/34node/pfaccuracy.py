@@ -36,12 +36,12 @@ hiddemen_dim_condition = config['CNice']['hiddemen_dim_condition']
 output_dim_condition = config['CNice']['output_dim_condition']
 n_layers_condition = config['CNice']['n_layers_condition']
 
-batch_size = config['CNice']['batch_size']
+batch_size = config['CNice']['batch_size'] * 10  # Use a larger batch size for evaluation
 epochs = config['CNice']['epochs']
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 save_path = config['CNice']['save_path']
 
-p_index =  12 # torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
+p_index =  torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
 v_index = p_index
 n_bins = 20  # Number of bins for the pdf and cdf plot
 # -----------------------
@@ -272,7 +272,7 @@ ax4.set_title('CDF of Predicted Output')
 ax1.set_xlabel('p_a')
 ax1.set_ylabel('p_i')
 ax4.set_zlabel('Cumulative Density')
-
+plt.title(f'Distribution of True Power and Predicted Power using GMM Estimation {p_index}')
 plt.tight_layout()
 plt.savefig(f'figures/realpowerscaled_pdf_cdf.png')
 plt.close()
@@ -379,6 +379,7 @@ ax1.set_xlabel('p_a')
 ax1.set_ylabel('p_i')
 ax4.set_zlabel('Cumulative Density')
 
+plt.title(f'Distribution of True Power and Predicted Power using GMM Estimation {p_index}')
 plt.tight_layout()
 plt.savefig(f'figures/realpower_pdf_cdf.png')
 plt.close()
