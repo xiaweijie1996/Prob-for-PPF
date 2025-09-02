@@ -15,8 +15,7 @@ import yaml
 from src.models.cnice.cnicemodel import CNicemModel
 from src.powersystems.node34 import Node34Example
 from src.powersystems.randomsys import magnitude_transform, angle_transform
-from src.utility.scalers import fit_powerflow_scalers
-from src.utility.inversepdf import inverse_pdf_gaussian
+
 
 # -----------------------
 # Configureation
@@ -39,10 +38,11 @@ hiddemen_dim_condition = config['CNice']['hiddemen_dim_condition']
 output_dim_condition = config['CNice']['output_dim_condition']
 n_layers_condition = config['CNice']['n_layers_condition']
 
-device = 'cpu'
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 save_path = config['CNice']['save_path']
 batch_size = 10000
-n_bins = 50  # Number of bins for the histogram
+n_bins = 20  # Number of bins for the histogram
+
 # Fix other nodes, vary one node
 p_index = 12 # torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
 v_index = p_index
@@ -67,46 +67,24 @@ nice_model = CNicemModel(
 ).to(device)
 print(f"Model Parameters: {sum(p.numel() for p in nice_model.parameters() if p.requires_grad)}")
 
-
 # -----------------------    
-# Load GMM and Scalers
+# Load GMM, MODEL, and Scalers
 # -----------------------
 with open(dis_path, 'rb') as f:
     gmm = pickle.load(f)  
-print("Loaded GMM from:", dis_path)
-
+    
 with open(scaler_path, 'rb') as f:
     scaler = pickle.load(f)
-print("Loaded scalers from:", scaler_path)
 
-# Load the trained model
 model_path = os.path.join(save_path, f"cnicemodel_{num_nodes}.pth")
 nice_model.load_state_dict(torch.load(model_path, map_location=device))
-print("Loaded model from:", model_path)
 
 # Define another GMM for p_index active and reactive power
-gmm_p_index = GaussianMixture(n_components=gmm.n_components, covariance_type='full')
+gmm_p_index = GaussianMixture(n_components=gmm.n_components, covariance_type=gmm.covariance_type)
 gmm_p_index.means_ = gmm.means_[:, [p_index, p_index + num_nodes - 1]]
 gmm_p_index.covariances_ = gmm.covariances_[:, [p_index, p_index + num_nodes - 1], :][:, :, [p_index, p_index + num_nodes - 1]]
 gmm_p_index.weights_ = gmm.weights_
 gmm_p_index.precisions_cholesky_ = np.linalg.cholesky(np.linalg.inv(gmm_p_index.covariances_))
-print("Defined GMM for target node power:", gmm_p_index)
-samples_p_index = gmm_p_index.sample(1000)[0]
-original_samples = gmm.sample(1000)[0]
-original_samples = original_samples[:, [p_index, p_index + num_nodes - 1]]
-print('mean of original samples:', original_samples.mean(axis=0), 'cov of original samples:', np.cov(original_samples, rowvar=False))
-print('mean of p_index samples:', samples_p_index.mean(axis=0), 'cov of p_index samples:', np.cov(samples_p_index, rowvar=False))
-# Plot the samples to see the distribution
-plt.figure(figsize=(8, 6))
-plt.scatter(original_samples[:, 0], original_samples[:, 1], alpha=0.5, label='Original Samples')
-plt.scatter(samples_p_index[:, 0], samples_p_index[:, 1], alpha=0.5, label='P_index Samples')
-plt.title('Samples from Original GMM and P_index GMM')
-plt.xlabel('Active Power')
-plt.ylabel('Reactive Power')
-plt.legend()
-plt.grid()
-plt.savefig(f'figures/target_node_{p_index}_{num_nodes}_gmm_samples.png')
-plt.close()
 
 # -----------------------    
 # Define the data and distribution
@@ -144,13 +122,11 @@ output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
 nice_model.eval()
 with torch.no_grad():
     pre_v, _jaf = nice_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
-    # fake_output_y = pre_v + torch.randn_like(output_y) * 0.1
     pre_p, _jai = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
     
 pre_v = pre_v.cpu().numpy()
 pre_p = pre_p.cpu().numpy()
 print(f"pre_v: {pre_v.shape}, pre_p: {pre_p.shape}")
-
 
 # Scale back to original
 pre_v_magnitude = pre_v[:, 0] * scaler['std_voltage_magnitude'][p_index] + scaler['mean_voltage_magnitude'][p_index]
@@ -169,7 +145,8 @@ true_p_reactive = reactive_power[:, p_index]
 # f(x) = y
 # p(x) = p(y) * |det(d f^-1(y)/ dy)
 # # Plot the empirical pdf and cdf of x
-y = np.hstack((true_v_magnitude.reshape(-1,1), true_v_angle.reshape(-1,1)))
+# y = np.hstack((true_v_magnitude.reshape(-1,1), true_v_angle.reshape(-1,1)))
+y = pre_v
 
 # Check the min and max if x and y
 max_y0, min_y0 = y[:,0].max().item(), y[:,0].min().item()
@@ -233,73 +210,85 @@ plt.close()
 # Compute the density of the output using the model
 # -----------------------
 # Condition input, the same for all does not matter the p_index as it will be replaced in the null token, the scenario is fixed
-nice_model.eval()
-with torch.no_grad():
-    x_inverse, _ja_inverse = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
+# nice_model.eval()
+# with torch.no_grad():
+#     x_inverse, _ja_inverse = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
 
 # Inverse the data
-x_inverse = x_inverse.cpu().numpy()
+x_inverse = pre_p
 x_inverse_active = x_inverse[:, 0] * scaler['std_active_power'][p_index] + scaler['mean_active_power'][p_index]
 x_inverse_reactive = x_inverse[:, 1] * scaler['std_reactive_power'][p_index] + scaler['mean_reactive_power'][p_index]
 x_inverse_denormalized = np.hstack((x_inverse_active.reshape(-1,1), x_inverse_reactive.reshape(-1,1)))
+print(f"x_inverse_active: min {x_inverse_active.min()}, max {x_inverse_active.max()}, x_inverse_reactive: min {x_inverse_reactive.min()}, max {x_inverse_reactive.max()}")
+print(f"x_inverse_denormalized shape: {x_inverse_denormalized.shape}")
+# # Compute the density p(x) using GMM
+# _ja_inverse = _ja_inverse.cpu().numpy()
+# p_compute = gmm_p_index.score_samples(x_inverse_denormalized)
+# p_compute = np.exp(p_compute)   # p(y) * |det(d f^-1(y)/ dy)
+# print("Computed p(y) mean:", p_y_compute.mean().item(), "std:", p_y_compute.std().item())
+# # y -> y_scaled ja is 
+# ja_scaler_y =  scaler['std_voltage_angle'][v_index] * scaler['std_voltage_magnitude'][v_index]
+# # y_scaled -> x x_scaled ja is _ja_inverse
+# # x_scaled -> x ja is scaler['std'][[p_index, p_index + num_nodes - 1]]
+# ja_scale_x = scaler['std_active_power'][p_index] * scaler['std_reactive_power'][p_index]
+# p_y_compute = p_y_compute * _ja_inverse  / (ja_scaler_y * ja_scale_x) * (8/600/0.000001 )
+# print('all jas are:', ja_scaler_y, ja_scale_x, _ja_inverse.mean().item())
 
-# Compute the density p(x) using GMM
-_ja_inverse = _ja_inverse.cpu().numpy()
-p_y_compute = gmm_p_index.score_samples(x_inverse_denormalized)
-p_y_compute = np.exp(p_y_compute) * _ja_inverse  # p(y) * |det(d f^-1(y)/ dy)
-print(_ja_inverse.mean().item(), p_y_compute.mean().item())
+# print(_ja_inverse.mean().item(), p_y_compute.mean().item())
 
-# Compute the density for each bin
-density_y = torch.zeros((n_bins, n_bins))
-for i in range(n_bins):
-    for j in range(n_bins):
-        # pdf filter
-        filter = (
-        (y[:, 1] >= grid_y1[j, 0]) &
-        (y[:, 1] <  grid_y1[j, 0] + (max_y1 - min_y1) / n_bins) &  # y in y-bin j
-        (y[:, 0] >= grid_y0[0, i]) &
-        (y[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
-        )
+# # Compute the density for each bin
+# density_y = torch.zeros((n_bins, n_bins))
+# for i in range(n_bins):
+#     for j in range(n_bins):
+#         # pdf filter
+#         filter = (
+#         (y[:, 1] >= grid_y1[j, 0]) &
+#         (y[:, 1] <  grid_y1[j, 0] + (max_y1 - min_y1) / n_bins) &  # y in y-bin j
+#         (y[:, 0] >= grid_y0[0, i]) &
+#         (y[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
+#         )
    
-        if np.sum(filter) > 0:
-            density_y[j, i] = p_y_compute[filter].mean()  # multiply by the area
-        else:
-            density_y[j, i] = 0.0
+#         if np.sum(filter) > 0:
+#             density_y[j, i] = p_y_compute[filter].mean()  # multiply by the area
+#         else:
+#             density_y[j, i] = 0.0
 
-# Compute cdf
-cum_density_y = torch.zeros((n_bins, n_bins))
-for i in range(n_bins):
-    for j in range(n_bins):
-        # sum over all bins less than or equal to (i, j)
-        density_sum = density_y[:j+1, :i+1].sum()
-        cum_density_y[j, i] = density_sum * gap_area  # multiply by the area
+# # Compute cdf
+# cum_density_y = torch.zeros((n_bins, n_bins))
+# for i in range(n_bins):
+#     for j in range(n_bins):
+#         # sum over all bins less than or equal to (i, j)
+#         density_sum = density_y[:j+1, :i+1].sum()
+#         cum_density_y[j, i] = density_sum * gap_area  # multiply by the area
         
-# plot the density of the output
-fig = plt.figure(figsize=(14, 6))
-# First subplot: PDF
-ax1 = fig.add_subplot(1, 2, 1, projection='3d')
-ax1.plot_surface(grid_yy0, grid_yy1, density_y.detach().numpy(), cmap='viridis', edgecolor='none')
-ax1.set_title('Computed PDF of Output')
-ax1.set_xlabel('v_m')
-ax1.set_ylabel('v_a')
-ax1.set_zlabel('Density')
-# Second subplot: CDF
-ax2 = fig.add_subplot(1, 2, 2, projection='3d')
-ax2.plot_surface(grid_yy0, grid_yy1, cum_density_y.detach().numpy(), cmap='viridis', edgecolor='none')
-ax2.set_title('Computed CDF of Output')
-ax2.set_xlabel('v_m')
-ax2.set_ylabel('v_a')
-ax2.set_zlabel('Cumulative Density')    
-plt.tight_layout()
-plt.savefig(f'figures/target_node_{v_index}_{num_nodes}_computed_pdf_cdf.png')
-plt.close()
+# # plot the density of the output
+# fig = plt.figure(figsize=(14, 6))
+# # First subplot: PDF
+# ax1 = fig.add_subplot(1, 2, 1, projection='3d')
+# ax1.plot_surface(grid_yy0, grid_yy1, density_y.detach().numpy(), cmap='viridis', edgecolor='none')
+# ax1.set_title('Computed PDF of Output')
+# ax1.set_xlabel('v_m')
+# ax1.set_ylabel('v_a')
+# ax1.set_zlabel('Density')
+# # Second subplot: CDF
+# ax2 = fig.add_subplot(1, 2, 2, projection='3d')
+# ax2.plot_surface(grid_yy0, grid_yy1, cum_density_y.detach().numpy(), cmap='viridis', edgecolor='none')
+# ax2.set_title('Computed CDF of Output')
+# ax2.set_xlabel('v_m')
+# ax2.set_ylabel('v_a')
+# ax2.set_zlabel('Cumulative Density')    
+# plt.tight_layout()
+# plt.savefig(f'figures/target_node_{v_index}_{num_nodes}_computed_pdf_cdf.png')
+# plt.close()
 
 # -----------------------
 # Error analysis
 # -----------------------
 # Plot distribution of inverse_x and input_x
-input_x_np = input_x.cpu().numpy()
-x_inverse_np = x_inverse.detach().cpu().numpy()
+# input_x_np = np.hstack((true_p_active.reshape(-1,1), true_p_reactive.reshape(-1,1)))
+# x_inverse_np = x_inverse_denormalized
+input_x_np= input_x.cpu().numpy()
+x_inverse_np = pre_p
 # fig, ax = plt.subplots(subplot_kw={"projection"})
 # 2D scatter plot
 fig = plt.figure(figsize=(8, 6))
@@ -310,30 +299,84 @@ ax.set_title('Input x and Inverse x Distribution')
 ax.set_xlabel('x0')
 ax.set_ylabel('x1')
 ax.legend()
-plt.savefig(f'figures/target_node_x_{v_index}_{num_nodes}_input_inverse_distribution_2d.png')
+plt.savefig(f'figures/scaled_powrer_distribution.png')
 plt.close()
 
-# plot the density comparison if x_inverse and input_x
-log_density_input_x = gmm.score_samples(input_x_np)
-log_density_x_inverse = gmm.score_samples(x_inverse_np)
-density_input_x = np.exp(log_density_input_x)
-density_x_inverse = np.exp(log_density_x_inverse)
-# 3d two surface plot
+# Same 3D plot to plot the pdf and cdf of input_x and inverse_x using the same method as above
+# input_x use MC mehtod
+# pdf of inverse_x use gmm to get the p(x) directly
+# Check the min and max if x and y
+max_x0, min_x0 = input_x_np[:,0].max().item(), input_x_np[:,0].min().item()
+max_x1, min_x1 = input_x_np[:,1].max().item(), input_x_np[:,1].min().item()
+print(f"x0: min {min_x0}, max {max_x0}, x1: min {min_x1}, max {max_x1}")
+x0_line = np.linspace(min_x0, max_x0, n_bins)
+x1_line = np.linspace(min_x1, max_x1, n_bins)
+gap_area_x = (max_x0 - min_x0) * (max_x1 - min_x1) / (n_bins * n_bins)
+
+grid_xx0, grid_xx1 = np.meshgrid(x0_line, x1_line)
+grid_x0, grid_x1 = np.meshgrid(x0_line, x1_line, sparse=True)
+density_input = np.zeros((n_bins, n_bins))
+density_inverse = np.zeros((n_bins, n_bins))
+print("Grid shape:", grid_x0.shape, grid_x1.shape)
+# print(grid_x0)
+# print(grid_x1)
+# compute the density of each bin  
+for i in range(n_bins):
+    for j in range(n_bins):
+        # pdf filter for input_x
+        filter_input = (
+        (input_x_np[:, 1] >= grid_x1[j, 0]) &
+        (input_x_np[:, 1] <  grid_x1[j, 0] + (max_x1 - min_x1) / n_bins) &  # x in x-bin j
+        (input_x_np[:, 0] >= grid_x0[0, i]) &
+        (input_x_np[:, 0] <  grid_x0[0, i] + (max_x0 - min_x0) / n_bins)    # x in x-bin i
+        )
+
+        density_input[j, i] = np.sum(filter_input) / (batch_size * gap_area_x)
+        
+        # pdf filter for inverse_x
+        filter_inverse = (
+        (x_inverse_np[:, 1] >= grid_x1[j, 0]) &
+        (x_inverse_np[:, 1] <  grid_x1[j, 0] + (max_x1 - min_x1) / n_bins) &  # x in x-bin j
+        (x_inverse_np[:, 0] >= grid_x0[0, i]) &
+        (x_inverse_np[:, 0] <  grid_x0[0, i] + (max_x0 - min_x0) / n_bins)    # x in x-bin i
+        )
+
+        density_inverse[j, i] = np.sum(filter_inverse) / (batch_size * gap_area_x)
+        
+# Plot the pdf and cdf in a 3d plot
 fig = plt.figure(figsize=(14, 6))
-# First subplot: Input x density
+# First subplot: PDF
 ax1 = fig.add_subplot(1, 2, 1, projection='3d')
-ax1.scatter(input_x_np[:,0], input_x_np[:,1], density_input_x, c='b', label='Input x Density', alpha=0.5)
-ax1.set_title('Input x Density')
+ax1.plot_surface(grid_xx0, grid_xx1, density_input, cmap='viridis', edgecolor='none')
+ax1.set_title('PDF of Input x')
 ax1.set_xlabel('x0')
 ax1.set_ylabel('x1')
 ax1.set_zlabel('Density')
-# Second subplot: Inverse x density
+# Second subplot: PDF of inverse_x
 ax2 = fig.add_subplot(1, 2, 2, projection='3d')
-ax2.scatter(x_inverse_np[:,0], x_inverse_np[:,1], density_x_inverse, c='r', label='Inverse x Density', alpha=0.5)
-ax2.set_title('Inverse x Density')
+ax2.plot_surface(grid_xx0, grid_xx1, density_inverse, cmap='viridis', edgecolor='none')
+ax2.set_title('PDF of Inverse x')
 ax2.set_xlabel('x0')
 ax2.set_ylabel('x1')
-ax2.set_zlabel('Density')
+ax2.set_zlabel('Density')    
 plt.tight_layout()
-plt.savefig(f'figures/target_node_x_{v_index}_{num_nodes}_input_inverse_density_3d.png')
+plt.savefig(f'figures/target_node_x_{v_index}_{num_nodes}_input_inverse_pdf_3d.png')
 plt.close()
+
+# Get the density of inverse_x using gmm
+# --- IGNORE ---
+density = gmm_p_index.score_samples(x_inverse_denormalized)
+density = np.exp(density)
+
+# Plot the density of x_inverse_np using gmm using 3d plot
+fig = plt.figure(figsize=(8, 6))
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(x_inverse_np[:,0], x_inverse_np[:,1], density, c='r', label='Inverse x Density', alpha=0.5)
+ax.set_title('Density of Inverse x using GMM')
+ax.set_xlabel('x0')
+ax.set_ylabel('x1')
+ax.set_zlabel('Density')
+ax.legend()
+plt.savefig(f'figures/target_node_x_{v_index}_{num_nodes}_inverse_density_gmm_3d.png')
+plt.close()
+# --- IGNORE ---
