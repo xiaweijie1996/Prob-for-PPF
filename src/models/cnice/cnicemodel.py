@@ -165,7 +165,7 @@ class CNiceModelBasic(torch.nn.Module):
         # Combine the outputs
         x1 = torch.cat([x11, x12], dim=1)
 
-        return x1, 1/(torch.abs(torch.cumprod(self.vectorcontrain(self.vector), dim=1))[:,-1])  # Return the Jacobian determinant as well
+        return x1, 1/torch.abs(torch.cumprod(scaler, dim=1))[:,-1]   # Return the Jacobian determinant as well
     
     
 class CNicemModel(torch.nn.Module):
