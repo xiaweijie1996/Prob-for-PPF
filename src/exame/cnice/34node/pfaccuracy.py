@@ -9,6 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import yaml
+from sklearn.mixture import GaussianMixture
 
 from src.models.cnice.cnicemodel import CNicemModel
 from src.powersystems.node34 import Node34Example
@@ -40,6 +41,9 @@ epochs = config['CNice']['epochs']
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 save_path = config['CNice']['save_path']
 
+p_index =  12 # torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
+v_index = p_index
+n_bins = 20  # Number of bins for the pdf and cdf plot
 # -----------------------
 # Initialize the random system　model and scalers
 # -----------------------
@@ -75,6 +79,13 @@ model_path = os.path.join(save_path, f"cnicemodel_{num_nodes}.pth")
 nice_model.load_state_dict(torch.load(model_path, map_location=device))
 print("Loaded model from:", model_path)
 
+# Load the GMM for the selected power input node
+gmm_p_index = GaussianMixture(n_components=gmm.n_components, covariance_type=gmm.covariance_type)
+gmm_p_index.means_ = gmm.means_[:, [p_index, p_index + num_nodes - 1]]
+gmm_p_index.covariances_ = gmm.covariances_[:, [p_index, p_index + num_nodes - 1], :][:, :, [p_index, p_index + num_nodes - 1]]
+gmm_p_index.weights_ = gmm.weights_
+gmm_p_index.precisions_cholesky_ = np.linalg.cholesky(np.linalg.inv(gmm_p_index.covariances_))
+
 # -----------------------    
 # Define the data
 # -----------------------
@@ -98,13 +109,11 @@ concat_vm_va = np.hstack((scaled_voltage_magnitudes, scaled_voltage_angles))
 concat_active_reactive = np.hstack((scaled_active_power, scaled_reactive_power))
 
 # ----------------------- 
-# Evaluate the model
+# Evaluate the model point estimate accuracy
 # ----------------------- 
 input_power = torch.tensor(concat_active_reactive, device=device, dtype=torch.float32)
 target_voltage = torch.tensor(concat_vm_va, device=device, dtype=torch.float32)
 
-p_index =  12 # torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
-v_index = p_index
 input_x = torch.cat((input_power[:, p_index].unsqueeze(1), input_power[:, p_index+num_nodes-1].unsqueeze(1)), dim=1)  # shape (batch_size, 2)
 input_c = input_power.clone()
 output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
@@ -141,7 +150,6 @@ plt.legend()
 # plt.tight_layout()
 plt.savefig(f'figures/cnice_{num_nodes}node_accuracy1.png')
 
-
 # Scale back to original
 pre_v_magnitude = pre_v[:, 0] * scaler['std_voltage_magnitude'][p_index] + scaler['mean_voltage_magnitude'][p_index]
 pre_v_angle = pre_v[:, 1] * scaler['std_voltage_angle'][p_index] + scaler['mean_voltage_angle'][p_index]
@@ -171,3 +179,180 @@ plt.ylabel('Reactive Power (Q)')
 plt.legend()
 # plt.tight_layout()
 plt.savefig(f'figures/cnice_{num_nodes}node_accuracy2.png')
+
+# -----------------------
+# Visualize the distribution of input power and predicted power using pdf and cdf empirically
+# -----------------------
+y = input_x.cpu().numpy()
+y_hat = pre_p
+max_y0, min_y0 = y[:, 0].max().item(), y[:, 0].min().item()
+max_y1, min_y1 = y[:, 1].max().item(), y[:, 1].min().item()
+
+print(f"y0: min {min_y0}, max {max_y0}, y1: min {min_y1}, max {max_y1}")
+y0_line = np.linspace(min_y0, max_y0, n_bins)
+y1_line = np.linspace(min_y1, max_y1, n_bins)
+gap_area = (max_y0 - min_y0) * (max_y1 - min_y1) / (n_bins * n_bins)
+
+grid_yy0, grid_yy1 = np.meshgrid(y0_line, y1_line)
+grid_y0, grid_y1 = np.meshgrid(y0_line, y1_line, sparse=True)
+density = np.zeros((n_bins, n_bins))
+density_hat = np.zeros((n_bins, n_bins))
+cum_density = np.zeros((n_bins, n_bins))
+cum_density_hat = np.zeros((n_bins, n_bins))
+print("Grid shape:", grid_y0.shape, grid_y1.shape)
+# print(grid_y0)
+# print(grid_y1)
+# compute the density of each bin  
+for i in range(n_bins):
+    for j in range(n_bins):
+        # pdf filter
+        filter = (
+        (y[:, 1] >= grid_y1[j, 0]) &
+        (y[:, 1] <  grid_y1[j, 0] + (max_y1 - min_y1) / n_bins) &  # y in y-bin j
+        (y[:, 0] >= grid_y0[0, i]) &
+        (y[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
+        )
+
+        density[j, i] = np.sum(filter) / (batch_size * gap_area)
+        
+        # cdf filter
+        cdf_filter = (
+            (y[:, 1] <= grid_y1[j, 0]) &
+            (y[:, 0] <= grid_y0[0, i])
+        )
+        cum_density[j, i] = np.sum(cdf_filter) / batch_size
+        
+        # pdf filter for predicted
+        filter_hat = (
+        (y_hat[:, 1] >= grid_y1[j, 0]) &
+        (y_hat[:, 1] <  grid_y1[j, 0] + (max_y1 - min_y1) / n_bins) &  # y in y-bin j
+        (y_hat[:, 0] >= grid_y0[0, i]) &
+        (y_hat[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
+        )
+        density_hat[j, i] = np.sum(filter_hat) / (batch_size * gap_area)
+        
+        # cdf filter for predicted
+        cdf_filter_hat = (
+            (y_hat[:, 1] <= grid_y1[j, 0]) &
+            (y_hat[:, 0] <= grid_y0[0, i])
+        )
+        cum_density_hat[j, i] = np.sum(cdf_filter_hat) / batch_size
+        
+# Plot the pdf and cdf in a 3d plot
+fig = plt.figure(figsize=(14, 6))
+
+# First subplot: PDF
+ax1 = fig.add_subplot(2, 2, 1, projection='3d')
+ax1.plot_surface(grid_yy0, grid_yy1, density, cmap='viridis', edgecolor='none')
+ax1.set_title('PDF of Output')
+ax1.set_xlabel('p_a')
+ax1.set_ylabel('p_i')
+ax1.set_zlabel('Density')
+
+# Second subplot: CDF
+ax2 = fig.add_subplot(2, 2, 2, projection='3d')
+ax2.plot_surface(grid_yy0, grid_yy1,  cum_density, cmap='viridis', edgecolor='none')
+ax2.set_title('CDF of Output')
+ax1.set_xlabel('p_a')
+ax1.set_ylabel('p_i')
+ax2.set_zlabel('Cumulative Density')
+
+# Third subplot: PDF of predicted
+ax3 = fig.add_subplot(2, 2, 3, projection='3d')
+ax3.plot_surface(grid_yy0, grid_yy1, density_hat, cmap='viridis', edgecolor='none')
+ax3.set_title('PDF of Predicted Output')
+ax1.set_xlabel('p_a')
+ax1.set_ylabel('p_i')
+ax3.set_zlabel('Density')
+
+# Fourth subplot: CDF of predicted
+ax4 = fig.add_subplot(2, 2, 4, projection='3d')
+ax4.plot_surface(grid_yy0, grid_yy1, cum_density_hat, cmap='viridis', edgecolor='none')
+ax4.set_title('CDF of Predicted Output')
+ax1.set_xlabel('p_a')
+ax1.set_ylabel('p_i')
+ax4.set_zlabel('Cumulative Density')
+
+plt.tight_layout()
+plt.savefig(f'figures/realpowerscaled_pdf_cdf.png')
+plt.close()
+
+# ------------------------
+# Plot distribution of input power using GMM estimation
+# ------------------------
+pre_p_descale = np.hstack((pre_p_active.reshape(-1, 1), pre_p_reactive.reshape(-1, 1)))
+density_pre_p_descale = gmm_p_index.score_samples(pre_p_descale)
+print(density_pre_p_descale.shape)
+
+y = np.hstack((true_p_active.reshape(-1, 1), true_p_reactive.reshape(-1, 1)))
+max_y0, min_y0 = y[:, 0].max().item(), y[:, 0].min().item()
+max_y1, min_y1 = y[:, 1].max().item(), y[:, 1].min().item()
+
+print(f"y0: min {min_y0}, max {max_y0}, y1: min {min_y1}, max {max_y1}")
+y0_line = np.linspace(min_y0, max_y0, n_bins)
+y1_line = np.linspace(min_y1, max_y1, n_bins)
+gap_area = (max_y0 - min_y0) * (max_y1 - min_y1) / (n_bins * n_bins)
+
+grid_yy0, grid_yy1 = np.meshgrid(y0_line, y1_line)
+grid_y0, grid_y1 = np.meshgrid(y0_line, y1_line, sparse=True)
+density = np.zeros((n_bins, n_bins))
+cum_density = np.zeros((n_bins, n_bins))
+print("Grid shape:", grid_y0.shape, grid_y1.shape)
+for i in range(n_bins):
+    for j in range(n_bins):
+        # pdf filter
+        filter = (
+        (y[:, 1] >= grid_y1[j, 0]) &
+        (y[:, 1] <  grid_y1[j, 0] + (max_y1 - min_y1) / n_bins) &  # y in y-bin j
+        (y[:, 0] >= grid_y0[0, i]) &
+        (y[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
+        )
+
+        density[j, i] = np.sum(filter) / (batch_size * gap_area)
+        
+        # cdf filter
+        cdf_filter = (
+            (y[:, 1] <= grid_y1[j, 0]) &
+            (y[:, 0] <= grid_y0[0, i])
+        )
+        cum_density[j, i] = np.sum(cdf_filter) / batch_size
+        
+      
+# Plot the pdf and cdf in a 3d plot
+fig = plt.figure(figsize=(14, 6))
+
+# First subplot: PDF
+ax1 = fig.add_subplot(2, 2, 1, projection='3d')
+ax1.plot_surface(grid_yy0, grid_yy1, density, cmap='viridis', edgecolor='none')
+ax1.set_title('PDF of Output')
+ax1.set_xlabel('p_a')
+ax1.set_ylabel('p_i')
+ax1.set_zlabel('Density')
+
+# Second subplot: CDF
+ax2 = fig.add_subplot(2, 2, 2, projection='3d')
+ax2.plot_surface(grid_yy0, grid_yy1,  cum_density, cmap='viridis', edgecolor='none')
+ax2.set_title('CDF of Output')
+ax1.set_xlabel('p_a')
+ax1.set_ylabel('p_i')
+ax2.set_zlabel('Cumulative Density')
+
+# Third subplot: PDF of predicted
+ax3 = fig.add_subplot(2, 2, 3, projection='3d')
+ax3.plot_surface(grid_yy0, grid_yy1, density_hat, cmap='viridis', edgecolor='none')
+ax3.set_title('PDF of Predicted Output')
+ax1.set_xlabel('p_a')
+ax1.set_ylabel('p_i')
+ax3.set_zlabel('Density')
+
+# Fourth subplot: CDF of predicted
+ax4 = fig.add_subplot(2, 2, 4, projection='3d')
+ax4.plot_surface(grid_yy0, grid_yy1, cum_density_hat, cmap='viridis', edgecolor='none')
+ax4.set_title('CDF of Predicted Output')
+ax1.set_xlabel('p_a')
+ax1.set_ylabel('p_i')
+ax4.set_zlabel('Cumulative Density')
+
+plt.tight_layout()
+plt.savefig(f'figures/realpower_pdf_cdf.png')
+plt.close()
