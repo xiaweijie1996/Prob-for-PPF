@@ -10,6 +10,7 @@ import pickle
 
 import matplotlib.pyplot as plt
 from sklearn.mixture import GaussianMixture
+import yaml
 
 from src.models.cnice.cnicemodel import CNicemModel
 from src.powersystems.node34 import Node34Example
@@ -17,41 +18,40 @@ from src.powersystems.randomsys import magnitude_transform, angle_transform
 from src.utility.scalers import fit_powerflow_scalers
 from src.utility.inversepdf import inverse_pdf_gaussian
 
-
-
 # -----------------------
 # Configureation
 # -----------------------
-num_nodes = 34
-power_factor = 0.3
+with open('src/config34node.yaml', 'r') as f:
+    config = yaml.safe_load(f)
 
-split_ratio = 0.5
-n_blocks = 3
-hiddemen_dim = 128
-c_dim = (num_nodes - 1) * 2
-n_layers = 4
-input_dim = 2  # Assuming each node has a real and imaginary part
-hiddemen_dim_condition = 128
-output_dim_condition = 1
-n_layers_condition = 2
+num_nodes = config['SystemAndDistribution']['node']  # Total number of nodes including slack
+dis_path = config['SystemAndDistribution']['dis_path']  # Path to the distribution system file
+scaler_path = config['SystemAndDistribution']['scaler_path']  # Path to save/load the scalers
+power_factor = config['SystemAndDistribution']['power_factor']  # Power factor for reactive power calculation
 
-_root = 100
-batch_size = _root**2
+split_ratio = config['CNice']['split_ratio']
+n_blocks = config['CNice']['n_blocks']
+hiddemen_dim = config['CNice']['hiddemen_dim']
+c_dim = (2 * (num_nodes - 1))  # Condition dimension (P and Q for all nodes except slack)
+n_layers = config['CNice']['n_layers']
+input_dim = config['CNice']['input_dim']  # Input dimension (P and Q for one node)
+hiddemen_dim_condition = config['CNice']['hiddemen_dim_condition']
+output_dim_condition = config['CNice']['output_dim_condition']
+n_layers_condition = config['CNice']['n_layers_condition']
+
 device = 'cpu'
-save_path = 'src/training/cnice/savedmodel'
-
+save_path = config['CNice']['save_path']
+batch_size = 10000
+n_bins = 50  # Number of bins for the histogram
 # Fix other nodes, vary one node
 p_index = 12 # torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
 v_index = p_index
-n_components = 3
 print(f"Target node index: {p_index}, {v_index}")
+
 # -----------------------
 # Initialize the random system　model and scalers
 # -----------------------
 random_sys = Node34Example()
-mean_vector = [50 + i*2 for i in range(num_nodes)]  # Example mean vector
-mean_vector = np.array(mean_vector).astype(float)
-print(f"Mean vector: {mean_vector[1:].shape}, {mean_vector[1:]}")
 
 # Initialize the NICE model
 nice_model = CNicemModel(
@@ -67,67 +67,68 @@ nice_model = CNicemModel(
 ).to(device)
 print(f"Model Parameters: {sum(p.numel() for p in nice_model.parameters() if p.requires_grad)}")
 
-# Load the model and scalers
+
+# -----------------------    
+# Load GMM and Scalers
+# -----------------------
+with open(dis_path, 'rb') as f:
+    gmm = pickle.load(f)  
+print("Loaded GMM from:", dis_path)
+
+with open(scaler_path, 'rb') as f:
+    scaler = pickle.load(f)
+print("Loaded scalers from:", scaler_path)
+
+# Load the trained model
 model_path = os.path.join(save_path, f"cnicemodel_{num_nodes}.pth")
 nice_model.load_state_dict(torch.load(model_path, map_location=device))
+print("Loaded model from:", model_path)
 
-scalers = {}
-path_scalers = os.path.join(save_path, f'scalers_{num_nodes}.pkl')
-with open(path_scalers, 'rb') as f:
-    scalers = pickle.load(f)
-# Load the scalers
-scaler_vm = scalers['scaler_vm']
-scaler_va = scalers['scaler_va']
-scaler_p = scalers['scaler_p']
-scaler_q = scalers['scaler_q']
+# Define another GMM for p_index active and reactive power
+gmm_p_index = GaussianMixture(n_components=gmm.n_components, covariance_type='full')
+gmm_p_index.means_ = gmm.means_[:, [p_index, p_index + num_nodes - 1]]
+gmm_p_index.covariances_ = gmm.covariances_[:, [p_index, p_index + num_nodes - 1], :][:, :, [p_index, p_index + num_nodes - 1]]
+gmm_p_index.weights_ = gmm.weights_
+gmm_p_index.precisions_cholesky_ = np.linalg.cholesky(np.linalg.inv(gmm_p_index.covariances_))
+print("Defined GMM for target node power:", gmm_p_index)
+samples_p_index = gmm_p_index.sample(1000)[0]
+original_samples = gmm.sample(1000)[0]
+original_samples = original_samples[:, [p_index, p_index + num_nodes - 1]]
+print('mean of original samples:', original_samples.mean(axis=0), 'cov of original samples:', np.cov(original_samples, rowvar=False))
+print('mean of p_index samples:', samples_p_index.mean(axis=0), 'cov of p_index samples:', np.cov(samples_p_index, rowvar=False))
+# Plot the samples to see the distribution
+plt.figure(figsize=(8, 6))
+plt.scatter(original_samples[:, 0], original_samples[:, 1], alpha=0.5, label='Original Samples')
+plt.scatter(samples_p_index[:, 0], samples_p_index[:, 1], alpha=0.5, label='P_index Samples')
+plt.title('Samples from Original GMM and P_index GMM')
+plt.xlabel('Active Power')
+plt.ylabel('Reactive Power')
+plt.legend()
+plt.grid()
+plt.savefig(f'figures/target_node_{p_index}_{num_nodes}_gmm_samples.png')
+plt.close()
 
 # -----------------------    
 # Define the data and distribution
 # -----------------------
-_weights = np.random.randint(1, 10, size=(n_components,))
-_weights = _weights / np.sum(_weights)
-_weights = _weights.round(2)
-_active_power_index = np.random.normal(0,
-                                      scale=5, 
-                                      size=(batch_size, )) + mean_vector[1+p_index]
-# for _w in _weights:
-#     _active_power_index = np.concatenate((_active_power_index, 
-#                                          np.random.normal(mean_vector[1+p_index],
-#                                                           scale=5*_w, 
-#                                                           size=(int(batch_size*_w), ))))
-_active_power_index = _active_power_index[:batch_size]
-print(f"p_index: {p_index}, v_index: {v_index}, weights: {_weights}, _active_power_index: {_active_power_index.shape}")
+power_sample = gmm.sample(batch_size)[0]
+active_power = power_sample[:, :num_nodes-1]
+reactive_power = power_sample[:, num_nodes-1:]
 
-# Replace _active_power_index with sampled_index
-_active_power = np.tile(mean_vector[1:], (batch_size, 1))
-_active_power[:, p_index] = _active_power_index
-# _reactive_power = _active_power * power_factor
-print (_active_power.mean(axis=0).reshape(-1).shape)
-_reactive_power = (np.random.normal(0, scale=5, size=(batch_size, _active_power.shape[1])) 
-                   + _active_power.mean(axis=0).reshape(1, -1)) * power_factor
+_solution = random_sys.run(active_power=active_power, 
+                            reactive_power=reactive_power)
+voltage_magnitudes = magnitude_transform(_solution['v'])
+voltage_angles = angle_transform(_solution['v'])
 
-# Run the power flow to get the voltages
-_solution = random_sys.run(active_power=_active_power, 
-                            reactive_power=_reactive_power)
-_voltage_magnitudes = magnitude_transform(_solution['v'])
-_voltage_angles = angle_transform(_solution['v'])
+# Scale voltage and power using loaded scalers
+scaled_voltage_magnitudes = (voltage_magnitudes - scaler['mean_voltage_magnitude']) / scaler['std_voltage_magnitude']
+scaled_voltage_angles = (voltage_angles - scaler['mean_voltage_angle']) / scaler['std_voltage_angle']
+scaled_active_power = (active_power - scaler['mean_active_power']) / scaler['std_active_power']
+scaled_reactive_power = (reactive_power - scaler['mean_reactive_power']) / scaler['std_reactive_power']
 
-# Scale the data
-scaled_vm = scaler_vm.transform(_voltage_magnitudes)
-scaled_va = scaler_va.transform(_voltage_angles)
-scaled_active_power = scaler_p.transform(_active_power)
-scaled_reactive_power = scaler_q.transform(_reactive_power)
-
-# Fig a gmm to the input data
-gmm = GaussianMixture(n_components=n_components, covariance_type='full', random_state=0)
-_target_samples = np.concatenate((scaled_active_power[:, p_index].reshape(-1, 1),
-                                  scaled_reactive_power[:, p_index].reshape(-1, 1)), axis=1)
-# gmm.fit(_target_samples[:, 0].reshape(-1, 1))
-gmm.fit(_target_samples)
-print(f"GMM means: {gmm.means_}, covariances: {gmm.covariances_}, weights: {gmm.weights_}")
-print(f"target samples, mean and variance: {_target_samples.mean(axis=0)}, {_target_samples.std(axis=0)}")
-concat_vm_va = np.concatenate((scaled_vm, scaled_va), axis=1)
-concat_active_reactive = np.concatenate((scaled_active_power, scaled_reactive_power), axis=1)
+# Concat the scaled data
+concat_vm_va = np.hstack((scaled_voltage_magnitudes, scaled_voltage_angles))
+concat_active_reactive = np.hstack((scaled_active_power, scaled_reactive_power))
 
 # ----------------------- 
 # Evaluate the model
@@ -140,7 +141,6 @@ input_c = input_power.clone()
 output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
                       target_voltage[:, v_index+num_nodes-1].unsqueeze(1)), dim=1)
 
-
 nice_model.eval()
 with torch.no_grad():
     pre_v, _jaf = nice_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
@@ -151,25 +151,17 @@ pre_v = pre_v.cpu().numpy()
 pre_p = pre_p.cpu().numpy()
 print(f"pre_v: {pre_v.shape}, pre_p: {pre_p.shape}")
 
-# Reconstruct the full voltage and power arrays
-pre_v_total = target_voltage.clone().cpu().numpy()
-pre_p_total = input_power.clone().cpu().numpy()
-pre_v_total[:, v_index] = pre_v[:, 0]
-pre_v_total[:, v_index+num_nodes-1] = pre_v[:, 1]
-pre_p_total[:, p_index] = pre_p[:, 0]
-pre_p_total[:, p_index+num_nodes-1] = pre_p[:, 1]
 
-# Inverse transform the scaled data
-pre_v_total[:, :num_nodes-1] = scaler_vm.inverse_transform(pre_v_total[:, :num_nodes-1])
-pre_v_total[:, num_nodes-1:] = scaler_va.inverse_transform(pre_v_total[:, num_nodes-1:])
-pre_p_total[:, :num_nodes-1] = scaler_p.inverse_transform(pre_p_total[:, :num_nodes-1])
-pre_p_total[:, num_nodes-1:] = scaler_q.inverse_transform(pre_p_total[:, num_nodes-1:])
+# Scale back to original
+pre_v_magnitude = pre_v[:, 0] * scaler['std_voltage_magnitude'][p_index] + scaler['mean_voltage_magnitude'][p_index]
+pre_v_angle = pre_v[:, 1] * scaler['std_voltage_angle'][p_index] + scaler['mean_voltage_angle'][p_index]
+pre_p_active = pre_p[:, 0] * scaler['std_active_power'][p_index] + scaler['mean_active_power'][p_index]
+pre_p_reactive = pre_p[:, 1] * scaler['std_reactive_power'][p_index] + scaler['mean_reactive_power'][p_index]
 
-# pre_v and pre_p scaled back
-pre_vm_scaled = pre_v_total[:, :num_nodes-1]
-pre_va_scaled = pre_v_total[:, num_nodes-1:]
-pre_p_scaled = pre_p_total[:, :num_nodes-1]
-pre_q_scaled = pre_p_total[:, num_nodes-1:]
+true_v_magnitude = voltage_magnitudes[:, p_index]
+true_v_angle = voltage_angles[:, p_index]
+true_p_active = active_power[:, p_index]
+true_p_reactive = reactive_power[:, p_index]
 
 # ----------------------- 
 # Check distribution 
@@ -177,16 +169,12 @@ pre_q_scaled = pre_p_total[:, num_nodes-1:]
 # f(x) = y
 # p(x) = p(y) * |det(d f^-1(y)/ dy)
 # # Plot the empirical pdf and cdf of x
-# y = ((scaled_vm[:, v_index].reshape(-1, 1),
-#                     scaled_va[:, v_index].reshape(-1, 1)), axis=1)  # Original output data
-y = output_y.cpu().numpy()
-print(f"y: {y.shape}")
+y = np.hstack((true_v_magnitude.reshape(-1,1), true_v_angle.reshape(-1,1)))
 
 # Check the min and max if x and y
 max_y0, min_y0 = y[:,0].max().item(), y[:,0].min().item()
 max_y1, min_y1 = y[:,1].max().item(), y[:,1].min().item()
 print(f"y0: min {min_y0}, max {max_y0}, y1: min {min_y1}, max {max_y1}")
-n_bins = int(np.sqrt(batch_size))  # Number of bins for the histogram
 y0_line = np.linspace(min_y0, max_y0, n_bins)
 y1_line = np.linspace(min_y1, max_y1, n_bins)
 gap_area = (max_y0 - min_y0) * (max_y1 - min_y1) / (n_bins * n_bins)
@@ -246,12 +234,19 @@ plt.close()
 # -----------------------
 # Condition input, the same for all does not matter the p_index as it will be replaced in the null token, the scenario is fixed
 nice_model.eval()
-x_inverse, _ja_inverse = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
-# x_inverse[:,1] = x_inverse[:,0]  # only keep the active power
-# p_y_compute = gmm.score_samples(x_inverse[:,0].detach().numpy().reshape(-1, 1))
-p_y_compute = gmm.score_samples(x_inverse.detach().cpu().numpy())
-p_y_compute = torch.tensor(p_y_compute, dtype=torch.float32)
-p_y_compute = p_y_compute.exp().cpu() * _ja_inverse.cpu()
+with torch.no_grad():
+    x_inverse, _ja_inverse = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
+
+# Inverse the data
+x_inverse = x_inverse.cpu().numpy()
+x_inverse_active = x_inverse[:, 0] * scaler['std_active_power'][p_index] + scaler['mean_active_power'][p_index]
+x_inverse_reactive = x_inverse[:, 1] * scaler['std_reactive_power'][p_index] + scaler['mean_reactive_power'][p_index]
+x_inverse_denormalized = np.hstack((x_inverse_active.reshape(-1,1), x_inverse_reactive.reshape(-1,1)))
+
+# Compute the density p(x) using GMM
+_ja_inverse = _ja_inverse.cpu().numpy()
+p_y_compute = gmm_p_index.score_samples(x_inverse_denormalized)
+p_y_compute = np.exp(p_y_compute) * _ja_inverse  # p(y) * |det(d f^-1(y)/ dy)
 print(_ja_inverse.mean().item(), p_y_compute.mean().item())
 
 # Compute the density for each bin
@@ -278,11 +273,7 @@ for i in range(n_bins):
         # sum over all bins less than or equal to (i, j)
         density_sum = density_y[:j+1, :i+1].sum()
         cum_density_y[j, i] = density_sum * gap_area  # multiply by the area
-
-# max_cum_density_y = cum_density_y.max().item()
-# cum_density_y = cum_density_y / max_cum_density_y  # normalize to 1
-# density_y = density_y/max_cum_density_y
-
+        
 # plot the density of the output
 fig = plt.figure(figsize=(14, 6))
 # First subplot: PDF
