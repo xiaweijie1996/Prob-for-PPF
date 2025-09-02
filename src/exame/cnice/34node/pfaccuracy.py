@@ -70,6 +70,11 @@ with open(scaler_path, 'rb') as f:
     scaler = pickle.load(f)
 print("Loaded scalers from:", scaler_path)
 
+# Load the trained model
+model_path = os.path.join(save_path, f"cnicemodel_{num_nodes}.pth")
+nice_model.load_state_dict(torch.load(model_path, map_location=device))
+print("Loaded model from:", model_path)
+
 # -----------------------    
 # Define the data
 # -----------------------
@@ -105,14 +110,12 @@ input_c = input_power.clone()
 output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
                       target_voltage[:, v_index+num_nodes-1].unsqueeze(1)), dim=1)
 print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
-# print  mean and std of input_x and output_y
 print(f"Input_x mean: {input_x.mean(axis=0).cpu().numpy()}, std: {input_x.std(axis=0).cpu().numpy()}")
 print(f"Output_y mean: {output_y.mean(axis=0).cpu().numpy()}, std: {output_y.std(axis=0).cpu().numpy()}")
 
 nice_model.eval()
 with torch.no_grad():
     pre_v, _jaf = nice_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
-    # fake_output_y = pre_v + torch.randn_like(output_y) * 0.1
     pre_p, _jai = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
     
 pre_v = pre_v.cpu().numpy()
@@ -122,15 +125,15 @@ print(f"pre_v: {pre_v.shape}, pre_p: {pre_p.shape}")
 # Plot the pre_v and pre_p and real and target
 plt.figure(figsize=(12, 6))
 plt.subplot(1, 2, 1)
-plt.scatter(pre_v[:, 0], pre_v[:, 1], label='Predicted Voltage', alpha=0.1)
-plt.scatter(output_y[:, 0].cpu().numpy(), output_y[:, 1].cpu().numpy(), label='Target Voltage', alpha=0.1)
+plt.scatter(pre_v[:, 0], pre_v[:, 1], label='Predicted Voltage', alpha=0.1, c='blue')
+plt.scatter(output_y[:, 0].cpu().numpy(), output_y[:, 1].cpu().numpy(), label='Target Voltage', alpha=0.1, c='orange')
 plt.title('Predicted vs Target Voltage Magnitudes and Angles')
 plt.xlabel('Predicted Value')
 plt.ylabel('Target Value')
 plt.legend()
 plt.subplot(1, 2, 2)
-plt.scatter(pre_p[:, 0], pre_p[:, 1], label='Predicted Power', alpha=0.1)
-plt.scatter(input_x[:, 0].cpu().numpy(), input_x[:, 1].cpu().numpy(), label='Target Power', alpha=0.1)
+plt.scatter(pre_p[:, 0], pre_p[:, 1], label='Predicted Power', alpha=0.1, c='blue')
+plt.scatter(input_x[:, 0].cpu().numpy(), input_x[:, 1].cpu().numpy(), label='Target Power', alpha=0.1, c='orange')
 plt.title('Predicted vs Target Active and Reactive Power')
 plt.xlabel('Predicted Value')
 plt.ylabel('Target Value')
