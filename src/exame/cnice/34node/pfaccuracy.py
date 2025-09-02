@@ -8,42 +8,42 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+import yaml
 
 from src.models.cnice.cnicemodel import CNicemModel
 from src.powersystems.node34 import Node34Example
 from src.powersystems.randomsys import magnitude_transform, angle_transform
-from src.utility.scalers import fit_powerflow_scalers
 
 # -----------------------
 # Configureation
 # -----------------------
-num_nodes = 34
-# num_children = 3
-power_factor = 0.2
+with open('src/config34node.yaml', 'r') as f:
+    config = yaml.safe_load(f)
 
-split_ratio = 0.5
-n_blocks = 3
-hiddemen_dim = 128
-c_dim = (num_nodes - 1) * 2
-n_layers = 4
-input_dim = 2  # Assuming each node has a real and imaginary part
-hiddemen_dim_condition = 128
-output_dim_condition = 1
-n_layers_condition = 2
+num_nodes = config['SystemAndDistribution']['node']  # Total number of nodes including slack
+dis_path = config['SystemAndDistribution']['dis_path']  # Path to the distribution system file
+scaler_path = config['SystemAndDistribution']['scaler_path']  # Path to save/load the scalers
+power_factor = config['SystemAndDistribution']['power_factor']  # Power factor for reactive power calculation
 
-_root = 20
-batch_size = _root**2
-epochs = 100000
+split_ratio = config['CNice']['split_ratio']
+n_blocks = config['CNice']['n_blocks']
+hiddemen_dim = config['CNice']['hiddemen_dim']
+c_dim = (2 * (num_nodes - 1))  # Condition dimension (P and Q for all nodes except slack)
+n_layers = config['CNice']['n_layers']
+input_dim = config['CNice']['input_dim']  # Input dimension (P and Q for one node)
+hiddemen_dim_condition = config['CNice']['hiddemen_dim_condition']
+output_dim_condition = config['CNice']['output_dim_condition']
+n_layers_condition = config['CNice']['n_layers_condition']
+
+batch_size = config['CNice']['batch_size']
+epochs = config['CNice']['epochs']
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-save_path = 'src/training/cnice/savedmodel'
+save_path = config['CNice']['save_path']
 
 # -----------------------
 # Initialize the random system　model and scalers
 # -----------------------
 random_sys = Node34Example()
-mean_vector = [50 + i*2 for i in range(num_nodes)]  # Example mean vector
-mean_vector = np.array(mean_vector)
-print(f"Mean vector: {mean_vector[1:].shape}, {mean_vector[1:]}")
 
 # Initialize the NICE model
 nice_model = CNicemModel(
@@ -59,39 +59,38 @@ nice_model = CNicemModel(
 ).to(device)
 print(f"Model Parameters: {sum(p.numel() for p in nice_model.parameters() if p.requires_grad)}")
 
-# Load the model and scalers
-model_path = os.path.join(save_path, f"cnicemodel_{num_nodes}.pth")
-nice_model.load_state_dict(torch.load(model_path, map_location=device))
+# -----------------------    
+# Load GMM and Scalers
+# -----------------------
+with open(dis_path, 'rb') as f:
+    gmm = pickle.load(f)  
+print("Loaded GMM from:", dis_path)
 
-scalers = {}
-path_scalers = os.path.join(save_path, f'scalers_{num_nodes}.pkl')
-with open(path_scalers, 'rb') as f:
-    scalers = pickle.load(f)
-# Load the scalers
-scaler_vm = scalers['scaler_vm']
-scaler_va = scalers['scaler_va']
-scaler_p = scalers['scaler_p']
-scaler_q = scalers['scaler_q']
+with open(scaler_path, 'rb') as f:
+    scaler = pickle.load(f)
+print("Loaded scalers from:", scaler_path)
 
 # -----------------------    
 # Define the data
 # -----------------------
-_active_power = np.random.normal(mean_vector[1:], scale=5, size=(5000, num_nodes-1))  # Power in kW
-_reactive_power = _active_power * power_factor
-_solution = random_sys.run(active_power=_active_power, 
-                            reactive_power=_reactive_power)
-_voltage_magnitudes = magnitude_transform(_solution['v'])
-_voltage_angles = angle_transform(_solution['v'])
+power_sample = gmm.sample(batch_size)[0]
+active_power = power_sample[:, :num_nodes-1]
+reactive_power = power_sample[:, num_nodes-1:]
 
-# Scale the data
-scaled_vm = scaler_vm.transform(_voltage_magnitudes)
-scaled_va = scaler_va.transform(_voltage_angles)
-scaled_active_power = scaler_p.transform(_active_power)
-scaled_reactive_power = scaler_q.transform(_reactive_power)
+_solution = random_sys.run(active_power=active_power, 
+                            reactive_power=reactive_power)
+voltage_magnitudes = magnitude_transform(_solution['v'])
+voltage_angles = angle_transform(_solution['v'])
 
-# Concat the data
-concat_vm_va = np.concatenate((scaled_vm, scaled_va), axis=1)
-concat_active_reactive = np.concatenate((scaled_active_power, scaled_reactive_power), axis=1)
+# Scale voltage and power using loaded scalers
+scaled_voltage_magnitudes = (voltage_magnitudes - scaler['mean_voltage_magnitude']) / scaler['std_voltage_magnitude']
+scaled_voltage_angles = (voltage_angles - scaler['mean_voltage_angle']) / scaler['std_voltage_angle']
+scaled_active_power = (active_power - scaler['mean_active_power']) / scaler['std_active_power']
+scaled_reactive_power = (reactive_power - scaler['mean_reactive_power']) / scaler['std_reactive_power']
+
+# Concat the scaled data
+concat_vm_va = np.hstack((scaled_voltage_magnitudes, scaled_voltage_angles))
+concat_active_reactive = np.hstack((scaled_active_power, scaled_reactive_power))
 
 # ----------------------- 
 # Evaluate the model
@@ -99,13 +98,16 @@ concat_active_reactive = np.concatenate((scaled_active_power, scaled_reactive_po
 input_power = torch.tensor(concat_active_reactive, device=device, dtype=torch.float32)
 target_voltage = torch.tensor(concat_vm_va, device=device, dtype=torch.float32)
 
-p_index = torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
+p_index =  12 # torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
 v_index = p_index
 input_x = torch.cat((input_power[:, p_index].unsqueeze(1), input_power[:, p_index+num_nodes-1].unsqueeze(1)), dim=1)  # shape (batch_size, 2)
 input_c = input_power.clone()
 output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
                       target_voltage[:, v_index+num_nodes-1].unsqueeze(1)), dim=1)
 print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
+# print  mean and std of input_x and output_y
+print(f"Input_x mean: {input_x.mean(axis=0).cpu().numpy()}, std: {input_x.std(axis=0).cpu().numpy()}")
+print(f"Output_y mean: {output_y.mean(axis=0).cpu().numpy()}, std: {output_y.std(axis=0).cpu().numpy()}")
 
 nice_model.eval()
 with torch.no_grad():
@@ -133,55 +135,36 @@ plt.title('Predicted vs Target Active and Reactive Power')
 plt.xlabel('Predicted Value')
 plt.ylabel('Target Value')
 plt.legend()
-plt.tight_layout()
-plt.savefig(f'figures/cnice_{num_nodes}node_accuracy1.png', dpi=300)
+# plt.tight_layout()
+plt.savefig(f'figures/cnice_{num_nodes}node_accuracy1.png')
 
-# Reconstruct the full voltage and power arrays
-pre_v_total = target_voltage.clone().cpu().numpy()
-pre_p_total = input_power.clone().cpu().numpy()
-pre_v_total[:, v_index] = pre_v[:, 0]
-pre_v_total[:, v_index+num_nodes-1] = pre_v[:, 1]
-pre_p_total[:, p_index] = pre_p[:, 0]
-pre_p_total[:, p_index+num_nodes-1] = pre_p[:, 1]
 
-# Inverse transform the scaled data
-pre_v_total[:, :num_nodes-1] = scaler_vm.inverse_transform(pre_v_total[:, :num_nodes-1])
-pre_v_total[:, num_nodes-1:] = scaler_va.inverse_transform(pre_v_total[:, num_nodes-1:])
-pre_p_total[:, :num_nodes-1] = scaler_p.inverse_transform(pre_p_total[:, :num_nodes-1])
-pre_p_total[:, num_nodes-1:] = scaler_q.inverse_transform(pre_p_total[:, num_nodes-1:])
+# Scale back to original
+pre_v_magnitude = pre_v[:, 0] * scaler['std_voltage_magnitude'][p_index] + scaler['mean_voltage_magnitude'][p_index]
+pre_v_angle = pre_v[:, 1] * scaler['std_voltage_angle'][p_index] + scaler['mean_voltage_angle'][p_index]
+pre_p_active = pre_p[:, 0] * scaler['std_active_power'][p_index] + scaler['mean_active_power'][p_index]
+pre_p_reactive = pre_p[:, 1] * scaler['std_reactive_power'][p_index] + scaler['mean_reactive_power'][p_index]
 
-# pre_v and pre_p scaled back
-pre_vm_scaled = pre_v_total[:, :num_nodes-1]
-pre_va_scaled = pre_v_total[:, num_nodes-1:]
-pre_p_scaled = pre_p_total[:, :num_nodes-1]
-pre_q_scaled = pre_p_total[:, num_nodes-1:]
+true_v_magnitude = voltage_magnitudes[:, p_index]
+true_v_angle = voltage_angles[:, p_index]
+true_p_active = active_power[:, p_index]
+true_p_reactive = reactive_power[:, p_index]
 
-# Plot the pre_v_scaled and pre_p_scaled and real and target
+# Plot the pre_v and pre_p and real and target
 plt.figure(figsize=(12, 6))
 plt.subplot(1, 2, 1)
-plt.scatter(pre_vm_scaled[:, p_index], pre_va_scaled[:, p_index], label='Predicted Voltage', alpha=0.1)
-plt.scatter(_voltage_magnitudes[:, p_index], _voltage_angles[:, p_index], label='Target Voltage', alpha=0.1)        
-plt.title('Predicted vs Target Voltage Magnitudes and Angles (Scaled Back)')
-plt.xlabel('Predicted Value')
-plt.ylabel('Target Value')
+plt.scatter(pre_v_magnitude, pre_v_angle, label='Predicted Voltage', alpha=0.1)
+plt.scatter(true_v_magnitude, true_v_angle, label='True Voltage', alpha=0.1)
+plt.title('Predicted vs True Voltage Magnitudes and Angles')
+plt.xlabel('Voltage Magnitude (p.u.)')
+plt.ylabel('Voltage Angle (degrees)')
 plt.legend()
 plt.subplot(1, 2, 2)
-# print(p_index)
-# p_index = 2
-# print(pre_p_scaled[:3, p_index])
-# print("--------------------")
-# print(_active_power[:3, p_index])
-# print("--------------------")
-# print(pre_q_scaled[:3, p_index])
-# print("--------------------")
-# print(_reactive_power[:3, p_index])
-# print("--------------------")
-plt.scatter(pre_p_scaled[:, p_index], pre_q_scaled[:, p_index], label='Predicted Power', alpha=0.1)
-plt.scatter(_active_power[:, p_index], _reactive_power[:, p_index], label='Target Power', alpha=0.1)        
-plt.title('Predicted vs Target Active and Reactive Power (Scaled Back)') 
-plt.xlabel('Predicted Value')
-plt.ylabel('Target Value')
+plt.scatter(pre_p_active, pre_p_reactive, label='Predicted Power', alpha=0.1)
+plt.scatter(true_p_active, true_p_reactive, label='True Power', alpha=0.1)
+plt.title('Predicted vs True Active and Reactive Power')
+plt.xlabel('Active Power (P)')
+plt.ylabel('Reactive Power (Q)')
 plt.legend()
-plt.tight_layout()
-plt.savefig(f'figures/cnice_{num_nodes}node_accuracy2.png', dpi=300)
-
+# plt.tight_layout()
+plt.savefig(f'figures/cnice_{num_nodes}node_accuracy2.png')

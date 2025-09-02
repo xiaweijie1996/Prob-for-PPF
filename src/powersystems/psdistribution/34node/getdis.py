@@ -10,6 +10,7 @@ import wandb as wb
 import pickle 
 import yaml
 from sklearn.mixture import GaussianMixture
+import matplotlib.pyplot as plt
 
 from src.powersystems.node34 import Node34Example
 from src.powersystems.randomsys import  magnitude_transform, angle_transform
@@ -45,7 +46,7 @@ def main():
     _reactive_power3 = np.random.normal(loc=mean_vector[1:], scale=std, size=(batch_size, num_nodes-1)) * power_factor*1.4
     _active_power = np.vstack([_active_power1, _active_power2, _active_power3])
     _reactive_power = np.vstack([_reactive_power1, _reactive_power2, _reactive_power3])
-
+    
     # Run power flow
     _solution = random_sys.run(active_power=_active_power, 
                                 reactive_power=_reactive_power) 
@@ -63,6 +64,15 @@ def main():
     gmm_power.fit(power_data)
     # print covariances and means
     # print(f"GMM Power Means: {gmm_power.means_}, Covariances: {gmm_power.covariances_}")
+    samples = gmm_power.sample(batch_size)[0]
+    _active_power_sampled = samples[:, :num_nodes-1]
+    _reactive_power_sampled = samples[:, num_nodes-1:]
+    
+    _solution_sampled = random_sys.run(active_power=_active_power_sampled,
+                                        reactive_power=_reactive_power_sampled)
+    _voltage_magnitudes = magnitude_transform(_solution_sampled['v'])
+    _voltage_angles = angle_transform(_solution_sampled['v'])
+    print(f"Sampled Voltage magnitudes shape: {_voltage_magnitudes.shape}, Voltage angles shape: {_voltage_angles.shape}")
     
     # Save GMM model
     gmm_path = os.path.join(save_path, 'gmm_power.pkl')
@@ -97,6 +107,26 @@ def main():
     with open(scalers_path, 'wb') as f:
         pickle.dump(scalers, f)
     print(f"Scalers saved to {scalers_path}")
+    
+    # Plot active and voltage distribution
+    _index = 0
+    plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    plt.scatter(_reactive_power[:, _index], _active_power[:, _index], alpha=0.01)
+    plt.title(f'Active vs Reactive Power at Node {_index+1}')
+    plt.xlabel('Reactive Power (Q)')
+    plt.ylabel('Active Power (P)')
+    plt.grid(True)
+    plt.axis('equal')
+    plt.subplot(1, 2, 2)
+    plt.scatter(_voltage_magnitudes[:, _index], _voltage_angles[:, _index], alpha=0.01)
+    plt.title(f'Voltage Magnitude vs Angle at Node {_index+1}')
+    plt.xlabel('Voltage Magnitude (|V|)')
+    plt.ylabel('Voltage Angle (θ)')
+    plt.grid(True)
+    plt.axis('equal')
+    plt.savefig(os.path.join(save_path, 'PQ_distribution.png'.format(_index+1)))
+
     
 if __name__ == "__main__":
     main()
