@@ -20,9 +20,30 @@ CNice:
   hiddemen_dim_condition:  256
   output_dim_condition:  1
   n_layers_condition:  3
-  
+
   # Training parameters
   learning_rate:  0.0001
   batch_size:  1000
-  epochs:  100000000
+  lr: 0.001
+  epochs: 500000
   save_path:  'src/training/cnice/savedmodel'
+
+
+CRealnvp:
+  # Model parameters
+  split_ratio:  0.5
+  n_blocks:  4
+  hiddemen_dim:  186
+  c_dim:  66
+  n_layers:  4
+  input_dim:  2  # Assuming each node has a real and imaginary part
+  hiddemen_dim_condition:  256
+  output_dim_condition:  1
+  n_layers_condition:  3
+
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/training/crealnvp/savedmodel'
