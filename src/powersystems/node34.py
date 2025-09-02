@@ -55,7 +55,7 @@ class Node34Example:
     
 if __name__ == "__main__":
     # Example usage of the Node34Example class
-    np.random.seed(42)
+    # np.random.seed(42)
     active_power = np.random.normal(50, scale=1, size=(2, 33))  # # Power in kW
     print("Active power shape:", active_power.mean())
     print("Active power:", active_power.shape)
