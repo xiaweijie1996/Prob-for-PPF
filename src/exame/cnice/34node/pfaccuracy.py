@@ -282,7 +282,9 @@ plt.close()
 # ------------------------
 pre_p_descale = np.hstack((pre_p_active.reshape(-1, 1), pre_p_reactive.reshape(-1, 1)))
 density_pre_p_descale = gmm_p_index.score_samples(pre_p_descale)
+density_pre_p_descale = np.exp(density_pre_p_descale)
 print(density_pre_p_descale.shape)
+print("Mean density of predicted power using GMM:", np.mean(density_pre_p_descale))
 
 y = np.hstack((true_p_active.reshape(-1, 1), true_p_reactive.reshape(-1, 1)))
 max_y0, min_y0 = y[:, 0].max().item(), y[:, 0].min().item()
@@ -317,7 +319,31 @@ for i in range(n_bins):
         )
         cum_density[j, i] = np.sum(cdf_filter) / batch_size
         
-      
+density_hat = np.zeros((n_bins, n_bins))
+for i in range(n_bins):
+    for j in range(n_bins):
+        # pdf filter for predicted
+        filter_hat = (
+        (pre_p_descale[:, 1] >= grid_y1[j, 0]) &
+        (pre_p_descale[:, 1] <  grid_y1[j, 0] + (max_y1 - min_y1) / n_bins) &  # y in y-bin j
+        (pre_p_descale[:, 0] >= grid_y0[0, i]) &
+        (pre_p_descale[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
+        )
+        density_hat[j, i] = density_pre_p_descale[filter_hat].mean() 
+# Rplace nan with 0 and small value with 1e-6
+density_hat = np.nan_to_num(density_hat, nan=0.0)
+density_hat[density_hat < 1e-6] = 1e-6
+
+cum_density_hat = np.zeros((n_bins, n_bins))  
+for i in range(n_bins):
+    for j in range(n_bins):
+        cum_density_hat[j, i] = density_hat[:j+1, :i+1].sum() * gap_area
+
+if cum_density_hat.max() != 1.0:  
+    pro_scaler = 1.0 / cum_density_hat.max()
+    cum_density_hat = cum_density_hat * pro_scaler
+    density_hat = density_hat * pro_scaler      
+
 # Plot the pdf and cdf in a 3d plot
 fig = plt.figure(figsize=(14, 6))
 
