@@ -15,6 +15,11 @@ from src.models.cnice.cnicemodel import CNicemModel
 from src.powersystems.node34 import Node34Example
 from src.powersystems.randomsys import magnitude_transform, angle_transform
 
+# all np float64
+np.set_printoptions(precision=4, suppress=True)
+# all tensor float64
+torch.set_printoptions(precision=4, sci_mode=False)
+
 # -----------------------
 # Configureation
 # -----------------------
@@ -36,14 +41,16 @@ hiddemen_dim_condition = config['CNice']['hiddemen_dim_condition']
 output_dim_condition = config['CNice']['output_dim_condition']
 n_layers_condition = config['CNice']['n_layers_condition']
 
-batch_size = config['CNice']['batch_size'] * 10  # Use a larger batch size for evaluation
+batch_size_gen = config['CNice']['batch_size']  # Use a larger batch size for evaluation
 epochs = config['CNice']['epochs']
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 save_path = config['CNice']['save_path']
 
-p_index =  torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
+p_index = 12 # torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
 v_index = p_index
-n_bins = 20  # Number of bins for the pdf and cdf plot
+n_bins = 10  # Number of bins for the pdf and cdf plot
+_iter = 10  # Number of iterations to collect data for pdf and cdf plot
+batch_size = _iter  * batch_size_gen
 # -----------------------
 # Initialize the random system　model and scalers
 # -----------------------
@@ -86,62 +93,82 @@ gmm_p_index.covariances_ = gmm.covariances_[:, [p_index, p_index + num_nodes - 1
 gmm_p_index.weights_ = gmm.weights_
 gmm_p_index.precisions_cholesky_ = np.linalg.cholesky(np.linalg.inv(gmm_p_index.covariances_))
 
-# -----------------------    
-# Define the data
-# -----------------------
-power_sample = gmm.sample(batch_size)[0]
-active_power = power_sample[:, :num_nodes-1]
-reactive_power = power_sample[:, num_nodes-1:]
+input_x_collect = []
+input_c_collect = []
+output_y_collect = []
+pre_p_collect = []
+pre_v_collect = []
+_jai_collect = []
 
-_solution = random_sys.run(active_power=active_power, 
-                            reactive_power=reactive_power)
-voltage_magnitudes = magnitude_transform(_solution['v'])
-voltage_angles = angle_transform(_solution['v'])
+for _i in range(_iter):
+    # -----------------------    
+    # Define the data
+    # -----------------------
+    power_sample = gmm.sample(batch_size_gen)[0]
+    print(f"Sampled power shape: {power_sample.shape}")  # (batch_size, 2*(num_nodes-1))
+    print(f"Power sample statistics: mean {power_sample.mean()}, std {power_sample.std()}")
+    active_power = power_sample[:, :num_nodes-1]
+    reactive_power = power_sample[:, num_nodes-1:]
 
-# Scale voltage and power using loaded scalers
-scaled_voltage_magnitudes = (voltage_magnitudes - scaler['mean_voltage_magnitude']) / scaler['std_voltage_magnitude']
-scaled_voltage_angles = (voltage_angles - scaler['mean_voltage_angle']) / scaler['std_voltage_angle']
-scaled_active_power = (active_power - scaler['mean_active_power']) / scaler['std_active_power']
-scaled_reactive_power = (reactive_power - scaler['mean_reactive_power']) / scaler['std_reactive_power']
+    _solution = random_sys.run(active_power=active_power, 
+                                reactive_power=reactive_power)
+    voltage_magnitudes = magnitude_transform(_solution['v'])
+    voltage_angles = angle_transform(_solution['v'])
 
-# Concat the scaled data
-concat_vm_va = np.hstack((scaled_voltage_magnitudes, scaled_voltage_angles))
-concat_active_reactive = np.hstack((scaled_active_power, scaled_reactive_power))
+    # Scale voltage and power using loaded scalers
+    scaled_voltage_magnitudes = (voltage_magnitudes - scaler['mean_voltage_magnitude']) / scaler['std_voltage_magnitude']
+    scaled_voltage_angles = (voltage_angles - scaler['mean_voltage_angle']) / scaler['std_voltage_angle']
+    scaled_active_power = (active_power - scaler['mean_active_power']) / scaler['std_active_power']
+    scaled_reactive_power = (reactive_power - scaler['mean_reactive_power']) / scaler['std_reactive_power']
 
-# ----------------------- 
-# Evaluate the model point estimate accuracy
-# ----------------------- 
-input_power = torch.tensor(concat_active_reactive, device=device, dtype=torch.float32)
-target_voltage = torch.tensor(concat_vm_va, device=device, dtype=torch.float32)
+    # Concat the scaled data
+    concat_vm_va = np.hstack((scaled_voltage_magnitudes, scaled_voltage_angles))
+    concat_active_reactive = np.hstack((scaled_active_power, scaled_reactive_power))
 
-input_x = torch.cat((input_power[:, p_index].unsqueeze(1), input_power[:, p_index+num_nodes-1].unsqueeze(1)), dim=1)  # shape (batch_size, 2)
-input_c = input_power.clone()
-output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
-                      target_voltage[:, v_index+num_nodes-1].unsqueeze(1)), dim=1)
-print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
-print(f"Input_x mean: {input_x.mean(axis=0).cpu().numpy()}, std: {input_x.std(axis=0).cpu().numpy()}")
-print(f"Output_y mean: {output_y.mean(axis=0).cpu().numpy()}, std: {output_y.std(axis=0).cpu().numpy()}")
+    # ----------------------- 
+    # Evaluate the model point estimate accuracy
+    # ----------------------- 
+    input_power = torch.tensor(concat_active_reactive, device=device, dtype=torch.float32)
+    target_voltage = torch.tensor(concat_vm_va, device=device, dtype=torch.float32)
 
-nice_model.eval()
-with torch.no_grad():
-    pre_v, _jaf = nice_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
-    pre_p, _jai = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
+    input_x = torch.cat((input_power[:, p_index].unsqueeze(1), input_power[:, p_index+num_nodes-1].unsqueeze(1)), dim=1)  # shape (batch_size, 2)
+    input_c = input_power.clone()
+    output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
+                        target_voltage[:, v_index+num_nodes-1].unsqueeze(1)), dim=1)
+    nice_model.eval()
+    with torch.no_grad():
+        pre_v, _jaf = nice_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
+        pre_p, _jai = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
+        
+    pre_v = pre_v.cpu().numpy()
+    pre_p = pre_p.cpu().numpy()
+
+    # Collect the results
+    input_x_collect.append(input_x.cpu().numpy())
+    input_c_collect.append(input_c.cpu().numpy())
+    output_y_collect.append(output_y.cpu().numpy())
+    pre_p_collect.append(pre_p)
+    pre_v_collect.append(pre_v)
+    _jai_collect.append(_jai.cpu().numpy().reshape(-1, 1))
     
-pre_v = pre_v.cpu().numpy()
-pre_p = pre_p.cpu().numpy()
-print(f"pre_v: {pre_v.shape}, pre_p: {pre_p.shape}")
+input_x = torch.tensor(np.vstack(input_x_collect), device=device, dtype=torch.float32)
+input_c = torch.tensor(np.vstack(input_c_collect), device=device, dtype=torch.float32)
+output_y = torch.tensor(np.vstack(output_y_collect), device=device, dtype=torch.float32)
+pre_p = np.vstack(pre_p_collect)
+pre_v = np.vstack(pre_v_collect)
+_jai = torch.tensor(np.vstack(_jai_collect), device=device, dtype=torch.float32)
 
 # Plot the pre_v and pre_p and real and target
 plt.figure(figsize=(12, 6))
 plt.subplot(1, 2, 1)
-plt.scatter(pre_v[:, 0], pre_v[:, 1], label='Predicted Voltage', alpha=0.1, c='blue')
+plt.scatter(pre_v[:, 0], pre_v[:, 1], label='Predicted Voltage', alpha=0.01, c='blue')
 plt.scatter(output_y[:, 0].cpu().numpy(), output_y[:, 1].cpu().numpy(), label='Target Voltage', alpha=0.1, c='orange')
 plt.title('Predicted vs Target Voltage Magnitudes and Angles')
 plt.xlabel('Predicted Value')
 plt.ylabel('Target Value')
 plt.legend()
 plt.subplot(1, 2, 2)
-plt.scatter(pre_p[:, 0], pre_p[:, 1], label='Predicted Power', alpha=0.1, c='blue')
+plt.scatter(pre_p[:, 0], pre_p[:, 1], label='Predicted Power', alpha=0.01, c='blue')
 plt.scatter(input_x[:, 0].cpu().numpy(), input_x[:, 1].cpu().numpy(), label='Target Power', alpha=0.1, c='orange')
 plt.title('Predicted vs Target Active and Reactive Power')
 plt.xlabel('Predicted Value')
@@ -179,7 +206,7 @@ plt.ylabel('Reactive Power (Q)')
 plt.legend()
 # plt.tight_layout()
 plt.savefig(f'figures/cnice_{num_nodes}node_accuracy2.png')
-
+plt.close()
 # -----------------------
 # Visualize the distribution of input power and predicted power using pdf and cdf empirically
 # -----------------------
@@ -272,7 +299,7 @@ ax4.set_title('CDF of Predicted Output')
 ax1.set_xlabel('p_a')
 ax1.set_ylabel('p_i')
 ax4.set_zlabel('Cumulative Density')
-plt.title(f'Distribution of True Power and Predicted Power using GMM Estimation {p_index}')
+plt.title(f'Distribution of True Power and Predicted Power {p_index}')
 plt.tight_layout()
 plt.savefig(f'figures/realpowerscaled_pdf_cdf.png')
 plt.close()
@@ -383,3 +410,222 @@ plt.title(f'Distribution of True Power and Predicted Power using GMM Estimation 
 plt.tight_layout()
 plt.savefig(f'figures/realpower_pdf_cdf.png')
 plt.close()
+
+
+# -----------------------
+# Visualize the distribution of voltage and predicted voltage using pdf and cdf empirically
+# -----------------------
+y = output_y.cpu().numpy()
+y_hat = pre_v
+max_y0, min_y0 = y[:, 0].max().item(), y[:, 0].min().item()
+max_y1, min_y1 = y[:, 1].max().item(), y[:, 1].min().item()
+
+print(f"y0: min {min_y0}, max {max_y0}, y1: min {min_y1}, max {max_y1}")
+y0_line = np.linspace(min_y0, max_y0, n_bins)
+y1_line = np.linspace(min_y1, max_y1, n_bins)
+gap_area = (max_y0 - min_y0) * (max_y1 - min_y1) / (n_bins * n_bins)
+
+grid_yy0, grid_yy1 = np.meshgrid(y0_line, y1_line)
+grid_y0, grid_y1 = np.meshgrid(y0_line, y1_line, sparse=True)
+density = np.zeros((n_bins, n_bins))
+density_hat = np.zeros((n_bins, n_bins))
+cum_density = np.zeros((n_bins, n_bins))
+cum_density_hat = np.zeros((n_bins, n_bins))
+print("Grid shape:", grid_y0.shape, grid_y1.shape)
+# print(grid_y0)
+# print(grid_y1)
+# compute the density of each bin  
+for i in range(n_bins):
+    for j in range(n_bins):
+        # pdf filter
+        filter = (
+        (y[:, 1] >= grid_y1[j, 0]) &
+        (y[:, 1] <  grid_y1[j, 0] + (max_y1 - min_y1) / n_bins) &  # y in y-bin j
+        (y[:, 0] >= grid_y0[0, i]) &
+        (y[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
+        )
+
+        density[j, i] = np.sum(filter) / (batch_size * gap_area)
+        
+        # cdf filter
+        cdf_filter = (
+            (y[:, 1] <= grid_y1[j, 0]) &
+            (y[:, 0] <= grid_y0[0, i])
+        )
+        cum_density[j, i] = np.sum(cdf_filter) / batch_size
+        
+        # pdf filter for predicted
+        filter_hat = (
+        (y_hat[:, 1] >= grid_y1[j, 0]) &
+        (y_hat[:, 1] <  grid_y1[j, 0] + (max_y1 - min_y1) / n_bins) &  # y in y-bin j
+        (y_hat[:, 0] >= grid_y0[0, i]) &
+        (y_hat[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
+        )
+        density_hat[j, i] = np.sum(filter_hat) / (batch_size * gap_area)
+        
+        # cdf filter for predicted
+        cdf_filter_hat = (
+            (y_hat[:, 1] <= grid_y1[j, 0]) &
+            (y_hat[:, 0] <= grid_y0[0, i])
+        )
+        cum_density_hat[j, i] = np.sum(cdf_filter_hat) / batch_size
+        
+# Plot the pdf and cdf in a 3d plot
+fig = plt.figure(figsize=(14, 6))
+
+# First subplot: PDF
+ax1 = fig.add_subplot(2, 2, 1, projection='3d')
+ax1.plot_surface(grid_yy0, grid_yy1, density, cmap='viridis', edgecolor='none')
+ax1.set_title('PDF of Output')
+ax1.set_xlabel('v_m')
+ax1.set_ylabel('v_a')
+ax1.set_zlabel('Density')
+
+# Second subplot: CDF
+ax2 = fig.add_subplot(2, 2, 2, projection='3d')
+ax2.plot_surface(grid_yy0, grid_yy1,  cum_density, cmap='viridis', edgecolor='none')
+ax2.set_title('CDF of Output')
+ax1.set_xlabel('v_m')
+ax1.set_ylabel('v_a')
+ax2.set_zlabel('Cumulative Density')
+
+# Third subplot: PDF of predicted
+ax3 = fig.add_subplot(2, 2, 3, projection='3d')
+ax3.plot_surface(grid_yy0, grid_yy1, density_hat, cmap='viridis', edgecolor='none')
+ax3.set_title('PDF of Predicted Output')
+ax1.set_xlabel('v_m')
+ax1.set_ylabel('v_a')
+ax3.set_zlabel('Density')
+
+# Fourth subplot: CDF of predicted
+ax4 = fig.add_subplot(2, 2, 4, projection='3d')
+ax4.plot_surface(grid_yy0, grid_yy1, cum_density_hat, cmap='viridis', edgecolor='none')
+ax4.set_title('CDF of Predicted Output')
+ax1.set_xlabel('v_m')
+ax1.set_ylabel('v_a')
+ax4.set_zlabel('Cumulative Density')
+plt.title(f'Distribution of True Voltage and Predicted Voltage {p_index}')
+plt.tight_layout()
+plt.savefig(f'figures/realvoltagescaled_pdf_cdf.png')
+plt.close()
+
+
+# -----------------------
+# Visualize the distribution of voltage and predicted voltage using gmm estimation
+# -----------------------
+pre_v_descale = np.hstack((pre_v_magnitude.reshape(-1, 1), pre_v_angle.reshape(-1, 1)))
+
+ja_scaler_p = (scaler['std_active_power'][p_index] * scaler['std_reactive_power'][p_index])
+ja_scaler_v = 1/(scaler['std_voltage_magnitude'][v_index] * scaler['std_voltage_angle'][v_index])
+ja_scaler = ja_scaler_p * ja_scaler_v
+
+density_pre_v_descale = density_pre_p_descale  * _jai.cpu().numpy()  * ja_scaler
+print("Mean density of predicted voltage using GMM and Jacobian adjustment:", np.min(density_pre_v_descale), np.max(density_pre_v_descale), np.mean(density_pre_v_descale))
+print("ja_scaler_p:", ja_scaler_p, "ja_scaler_v:", ja_scaler_v, "ja_scaler:", ja_scaler)
+print("_jai:", _jai.cpu().numpy().mean())
+
+y = np.hstack((true_v_magnitude.reshape(-1, 1), true_v_angle.reshape(-1, 1)))
+max_y0, min_y0 = y[:, 0].max().item(), y[:, 0].min().item()
+max_y1, min_y1 = y[:, 1].max().item(), y[:, 1].min().item()
+
+print(f"y0: min {min_y0}, max {max_y0}, y1: min {min_y1}, max {max_y1}")
+y0_line = np.linspace(min_y0, max_y0, n_bins)
+y1_line = np.linspace(min_y1, max_y1, n_bins)
+gap_area = (max_y0 - min_y0) * (max_y1 - min_y1) / (n_bins * n_bins)
+
+grid_yy0, grid_yy1 = np.meshgrid(y0_line, y1_line)
+grid_y0, grid_y1 = np.meshgrid(y0_line, y1_line, sparse=True)
+density = np.zeros((n_bins, n_bins))
+cum_density = np.zeros((n_bins, n_bins))
+print("Grid shape:", grid_y0.shape, grid_y1.shape)
+for i in range(n_bins):
+    for j in range(n_bins):
+        # pdf filter
+        filter = (
+        (y[:, 1] >= grid_y1[j, 0]) &
+        (y[:, 1] <  grid_y1[j, 0] + (max_y1 - min_y1) / n_bins) &  # y in y-bin j
+        (y[:, 0] >= grid_y0[0, i]) &
+        (y[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
+        )
+        if np.sum(filter) == 0:
+            density[j, i] = 0.0
+        else:
+            density[j, i] = np.sum(filter) / (batch_size * gap_area)
+        
+        # cdf filter
+        cdf_filter = (
+            (y[:, 1] <= grid_y1[j, 0]) &
+            (y[:, 0] <= grid_y0[0, i])
+        )
+        cum_density[j, i] = np.sum(cdf_filter) / batch_size
+        
+density_hat = np.zeros((n_bins, n_bins))
+for i in range(n_bins):
+    for j in range(n_bins):
+        # pdf filter for predicted
+        filter_hat = (
+        (pre_v_descale[:, 1] >= grid_y1[j, 0]) &
+        (pre_v_descale[:, 1] <  grid_y1[j, 0] + (max_y1 - min_y1) / n_bins) &  # y in y-bin j
+        (pre_v_descale[:, 0] >= grid_y0[0, i]) &
+        (pre_v_descale[:, 0] <  grid_y0[0, i] + (max_y0 - min_y0) / n_bins)    # x in x-bin i
+        )
+        if np.sum(filter_hat) == 0:
+            density_hat[j, i] = 0.0
+        else:
+            density_hat[j, i] = density_pre_v_descale[filter_hat].mean() 
+        
+# print(density_hat)       
+# Rplace nan with 0 and small value with 1e-6
+density_hat = np.nan_to_num(density_hat, nan=0.0)
+density_hat[density_hat < 1e-6] = 1e-6
+
+cum_density_hat = np.zeros((n_bins, n_bins))  
+for i in range(n_bins):
+    for j in range(n_bins):
+        cum_density_hat[j, i] = density_hat[:j+1, :i+1].sum() * gap_area
+
+if cum_density_hat.max() != 1.0:  
+    pro_scaler = 1.0 / cum_density_hat.max()
+    cum_density_hat = cum_density_hat * pro_scaler
+    density_hat = density_hat * pro_scaler      
+
+# Plot the pdf and cdf in a 3d plot
+fig = plt.figure(figsize=(14, 6))
+
+# First subplot: PDF
+ax1 = fig.add_subplot(2, 2, 1, projection='3d')
+ax1.plot_surface(grid_yy0, grid_yy1, density, cmap='viridis', edgecolor='none')
+ax1.set_title('PDF of Output')
+ax1.set_xlabel('p_a')
+ax1.set_ylabel('p_i')
+ax1.set_zlabel('Density')
+
+# Second subplot: CDF
+ax2 = fig.add_subplot(2, 2, 2, projection='3d')
+ax2.plot_surface(grid_yy0, grid_yy1,  cum_density, cmap='viridis', edgecolor='none')
+ax2.set_title('CDF of Output')
+ax1.set_xlabel('p_a')
+ax1.set_ylabel('p_i')
+ax2.set_zlabel('Cumulative Density')
+
+# Third subplot: PDF of predicted
+ax3 = fig.add_subplot(2, 2, 3, projection='3d')
+ax3.plot_surface(grid_yy0, grid_yy1, density_hat, cmap='viridis', edgecolor='none')
+ax3.set_title('PDF of Predicted Output')
+ax1.set_xlabel('p_a')
+ax1.set_ylabel('p_i')
+ax3.set_zlabel('Density')
+
+# Fourth subplot: CDF of predicted
+ax4 = fig.add_subplot(2, 2, 4, projection='3d')
+ax4.plot_surface(grid_yy0, grid_yy1, cum_density_hat, cmap='viridis', edgecolor='none')
+ax4.set_title('CDF of Predicted Output')
+ax1.set_xlabel('p_a')
+ax1.set_ylabel('p_i')
+ax4.set_zlabel('Cumulative Density')
+
+plt.title(f'Distribution of True Power and Predicted Power using GMM Estimation {p_index}')
+plt.tight_layout()
+plt.savefig(f'figures/realvoltage_pdf_cdf.png')
+plt.close()
+
