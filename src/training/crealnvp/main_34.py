@@ -16,6 +16,8 @@ from src.models.crealnvp.crealnvp import CRealnvpModel
 from src.powersystems.randomsys import  magnitude_transform, angle_transform
 from src.powersystems.node34 import Node34Example
 
+# Set all torch floats to double precision
+torch.set_default_dtype(torch.float64)
 
 def main(): 
     # Configureation
@@ -48,7 +50,7 @@ def main():
     random_sys = Node34Example()
 
     # Initialize the NICE model
-    nice_model = CRealnvpModel(
+    realnvp_model = CRealnvpModel(
         input_dim=input_dim,
         hidden_dim=hiddemen_dim,
         condition_dim=c_dim,
@@ -59,7 +61,8 @@ def main():
         output_dim_condition=output_dim_condition,
         n_layers_condition=n_layers_condition
     ).to(device)
-    print(f"Model Parameters: {sum(p.numel() for p in nice_model.parameters() if p.requires_grad)}")
+    realnvp_model.double()
+    print(f"Model Parameters: {sum(p.numel() for p in realnvp_model.parameters() if p.requires_grad)}")
     
     # Load GMM and Scalers
     # gmm = GaussianMixture(n_components=n_components, covariance_type='full', random_state=42)
@@ -75,7 +78,7 @@ def main():
     print("Loaded GMM from:", dis_path)
     
     # Define the optimizer
-    optimizer = torch.optim.Adam(nice_model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(realnvp_model.parameters(), lr=lr)
     
     # Define the loss function
     loss_function = torch.nn.MSELoss()
@@ -84,22 +87,25 @@ def main():
     wb.init(project=f"CRealnvp-node-{num_nodes}")
     
     # Log Model size
-    wb.log({"Model Parameters": sum(p.numel() for p in nice_model.parameters() if p.requires_grad)})
+    wb.log({"Model Parameters": sum(p.numel() for p in realnvp_model.parameters() if p.requires_grad)})
     
     # Load already trained model if exists
     model_path = os.path.join(save_path, f"CRealnvpmodel_{num_nodes}.pth")
     if os.path.exists(model_path):
-        nice_model.load_state_dict(torch.load(model_path))
+        realnvp_model.load_state_dict(torch.load(model_path))
         print(f"Loaded model from {model_path}")
     
     end_loss = 1e6
     for _ in range(epochs):
+        realnvp_model.train()
         
         #-------input and target power flow data preparation-------
         # Generate random active and reactive power inputs
         power_sample = gmm.sample(batch_size)[0]
         active_power = power_sample[:, :num_nodes-1]
         reactive_power = power_sample[:, num_nodes-1:]
+        # Log mean of active and reactive power
+        wb.log({"mean_active_power": active_power.mean(), "mean_reactive_power": reactive_power.mean()})
      
         # Run the power flow analysis
         solution = random_sys.run(active_power=active_power, 
@@ -118,8 +124,8 @@ def main():
         active_power = (active_power - scaler['mean_active_power']) / scaler['std_active_power']
         reactive_power = (reactive_power - scaler['mean_reactive_power']) / scaler['std_reactive_power']
         
-        input_power = torch.tensor(np.hstack((active_power, reactive_power)), dtype=torch.float32).to(device)
-        target_voltage = torch.tensor(voltages, dtype=torch.float32).to(device)
+        input_power = torch.tensor(np.hstack((active_power, reactive_power)), dtype=torch.float64).to(device)
+        target_voltage = torch.tensor(voltages, dtype=torch.float64).to(device)
         
         #-------input and target power flow data preparation-------
         p_index = torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
@@ -140,10 +146,10 @@ def main():
         optimizer.zero_grad()
         
         # Forward pass through the NICE model
-        output_voltage, _ja = nice_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
+        output_voltage, _ja = realnvp_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
         
         # Backward pass to get the output power
-        output_power, _j = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
+        output_power, _j = realnvp_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
         
         # Compute the loss
         loss_backward = loss_function(output_power, input_x)
@@ -154,6 +160,17 @@ def main():
         # Loss
         loss = loss_forward + loss_backward
     
+        # Add weight clipping to avoid NaN
+        torch.nn.utils.clip_grad_norm_(realnvp_model.parameters(), max_norm=1.0)
+        
+        # log the clip frequency
+        # total_norm = 0.0
+        # for p in realnvp_model.parameters():
+        #     param_norm = p.grad.data.norm(2)
+        #     total_norm += param_norm.item() ** 2
+        # total_norm = total_norm ** (1. / 2)
+        # wb.log({"grad_norm": total_norm})
+        
         # Error
         with torch.no_grad():
             loss_mangitude = loss_function(output_voltage[:, 0], output_y[:, 0])
@@ -178,7 +195,7 @@ def main():
         # Save the model every 100 epochs
         if (_ + 1) >100 and end_loss > loss_forward.item():
             end_loss = loss_forward.item()
-            torch.save(nice_model.state_dict(), os.path.join(save_path, f"CRealnvpmodel_{num_nodes}.pth"))
+            torch.save(realnvp_model.state_dict(), os.path.join(save_path, f"CRealnvpmodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
             
             # Plot the output vs target for power and voltage for the current p_index
@@ -205,7 +222,7 @@ def main():
             axes[1].axis('equal')
 
             fig.tight_layout()
-            fig.savefig('src/training/CRealnvp/savedmodel/CRealnvp_gen.png')
+            fig.savefig(os.path.join(save_path, f"CRealnvp_gen.png"))
 
             # ✅ log the figure object, not `plt`
             wb.log({"CRealnvp_gen": fig})

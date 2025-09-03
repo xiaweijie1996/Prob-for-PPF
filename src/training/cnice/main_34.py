@@ -48,7 +48,7 @@ def main():
     random_sys = Node34Example()
 
     # Initialize the NICE model
-    model = CNicemModel(
+    nice_model = CNicemModel(
         input_dim=input_dim,
         hidden_dim=hiddemen_dim,
         condition_dim=c_dim,
@@ -59,7 +59,7 @@ def main():
         output_dim_condition=output_dim_condition,
         n_layers_condition=n_layers_condition
     ).to(device)
-    print(f"Model Parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
+    print(f"Model Parameters: {sum(p.numel() for p in nice_model.parameters() if p.requires_grad)}")
     
     # Load GMM and Scalers
     # gmm = GaussianMixture(n_components=n_components, covariance_type='full', random_state=42)
@@ -75,21 +75,21 @@ def main():
     print("Loaded GMM from:", dis_path)
     
     # Define the optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(nice_model.parameters(), lr=lr)
     
     # Define the loss function
     loss_function = torch.nn.MSELoss()
     
     # Initialize Weights and Biases
-    wb.init(project=f"cRealnvp-{num_nodes}")
+    wb.init(project=f"cNICE-node-{num_nodes}")
     
     # Log Model size
-    wb.log({"Model Parameters": sum(p.numel() for p in model.parameters() if p.requires_grad)})
+    wb.log({"Model Parameters": sum(p.numel() for p in nice_model.parameters() if p.requires_grad)})
     
     # Load already trained model if exists
-    model_path = os.path.join(save_path, f"crealnvpmodel_{num_nodes}.pth")
+    model_path = os.path.join(save_path, f"cnicemodel_{num_nodes}.pth")
     if os.path.exists(model_path):
-        model.load_state_dict(torch.load(model_path))
+        nice_model.load_state_dict(torch.load(model_path))
         print(f"Loaded model from {model_path}")
     
     end_loss = 1e6
@@ -140,10 +140,10 @@ def main():
         optimizer.zero_grad()
         
         # Forward pass through the NICE model
-        output_voltage, _ja = model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
+        output_voltage, _ja = nice_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
         
         # Backward pass to get the output power
-        output_power, _j = model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
+        output_power, _j = nice_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
         
         # Compute the loss
         loss_backward = loss_function(output_power, input_x)
@@ -178,7 +178,7 @@ def main():
         # Save the model every 100 epochs
         if (_ + 1) >100 and end_loss > loss_forward.item():
             end_loss = loss_forward.item()
-            torch.save(model.state_dict(), os.path.join(save_path, f"crealnvp_{num_nodes}.pth"))
+            torch.save(nice_model.state_dict(), os.path.join(save_path, f"cnicemodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
             
             # Plot the output vs target for power and voltage for the current p_index
@@ -205,7 +205,7 @@ def main():
             axes[1].axis('equal')
 
             fig.tight_layout()
-            fig.savefig(os.path.join(save_path, f"crealnvp_gen.png"))
+            fig.savefig('src/training/cnice/savedmodel/cnice_gen.png')
 
             # ✅ log the figure object, not `plt`
             wb.log({"cnice_gen": fig})

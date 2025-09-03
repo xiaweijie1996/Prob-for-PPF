@@ -76,6 +76,7 @@ class CRealnvpBasic(torch.nn.Module):
         
         # Define a special token for null condition
         self.null_token = torch.nn.Parameter(torch.randn(1, self.hidden_dim_condition))
+        self.constrain = self.adjusted_sigmoid
         
     def add_pe_and_null_to_c(self, c, index_p, index_v, postional_encoding=False):
         """
@@ -120,6 +121,13 @@ class CRealnvpBasic(torch.nn.Module):
         c_add = self.fc_min_dim(c_add)
         
         return c_add.squeeze(-1)  # shape (batch_size, condition_dim +1)
+    
+    def adjusted_sigmoid(self, x):
+        _output =  torch.sigmoid(x/5) * 4 - 2
+        # if _output closer to 0, make it 1e-6
+        _output = torch.where(torch.abs(_output) < 1e-10, torch.tensor(1e-10, device=x.device), _output)
+        return _output
+        
         
     def forward(self, x, c, index_p, index_v, postional_encoding=False):
         c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v, postional_encoding=postional_encoding)
@@ -129,15 +137,15 @@ class CRealnvpBasic(torch.nn.Module):
         
         # Forward pass through the first coupling layer
         x21 = x11
-        s1 = torch.exp(self.fcs1(torch.cat([x11, c_processed], dim=-1)))
-        t1 = self.fcs1(torch.cat([x11, c_processed], dim=-1))
+        s1 = torch.exp(self.constrain(self.fcs1(torch.cat([x11, c_processed], dim=-1))))
+        t1 = self.fct1(torch.cat([x11, c_processed], dim=-1))
         x22 = x12 * s1 + t1
         _det_ja1 = torch.cumprod(s1, dim=1)[:,-1]
 
         # Forward pass through the second coupling layer
         x32 = x22
-        s2 = torch.exp(self.fcs2(torch.cat([x22, c_processed], dim=-1)))
-        t2 = self.fcs2(torch.cat([x22, c_processed], dim=-1))
+        s2 = torch.exp(self.constrain(self.fcs2(torch.cat([x22, c_processed], dim=-1))))
+        t2 = self.fct2(torch.cat([x22, c_processed], dim=-1))
         x31 = x21 * s2 + t2
         _det_ja2 = torch.cumprod(s2, dim=1)[:,-1]
 
@@ -155,15 +163,15 @@ class CRealnvpBasic(torch.nn.Module):
         
         # Inverse pass through the second coupling layer
         x22 = x32
-        s2 = torch.exp(self.fcs2(torch.cat([x22, c_processed], dim=-1)))
-        t2 = self.fcs2(torch.cat([x22, c_processed], dim=-1))
+        s2 = torch.exp(self.constrain(self.fcs2(torch.cat([x22, c_processed], dim=-1))))
+        t2 = self.fct2(torch.cat([x22, c_processed], dim=-1))
         x21 = (x31 - t2) / s2
         _det_ja2 = torch.cumprod(1/s2, dim=1)[:,-1]
         
         # Inverse pass through the first coupling layer
         x11 = x21
-        s1 = torch.exp(self.fcs1(torch.cat([x21, c_processed], dim=-1)))
-        t1 = self.fcs1(torch.cat([x21, c_processed], dim=-1))
+        s1 = torch.exp(self.constrain(self.fcs1(torch.cat([x21, c_processed], dim=-1))))
+        t1 = self.fct1(torch.cat([x21, c_processed], dim=-1))
         x12 = (x22 - t1) / s1
         _det_ja1 = torch.cumprod(1/s1, dim=1)[:,-1]
         
@@ -232,6 +240,7 @@ if __name__ == "__main__":
     
     # Forward pass
     y, ja = model.forward(x, c, index_p=index_p, index_v=index_v)
+    
     # Inverse pass
     x_recon, ja_inv = model.inverse(y, c, index_p=index_p, index_v=index_v)
 
