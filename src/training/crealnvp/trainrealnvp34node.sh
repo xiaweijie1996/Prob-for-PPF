@@ -11,8 +11,8 @@
 # set -euo pipefail
 
 # module purge
-module load 2023          # framework toolchain family (use the one you have)
-module load Python/3.10.4-GCCcore-11.3.0  # example from SURF docs; adjust if needed
+module load 2023r1 
+module load cuda/11.6
 
 source ~/venvs/ppf/bin/activate
 # Run your program (use python, not a bare .py with srun)
