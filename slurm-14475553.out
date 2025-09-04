@@ -1,0 +1,33 @@
+Host: gcn48.local.snellius.surf.nl
+Thu Sep  4 11:22:36 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 575.57.08              Driver Version: 575.57.08      CUDA Version: 12.9     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-40GB          On  |   00000000:CA:00.0 Off |                    0 |
+| N/A   30C    P0             46W /  400W |       0MiB /  40960MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+torch 2.8.0+cu128 cuda? True
+/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/networkx/utils/backends.py:135: RuntimeWarning: networkx backend defined more than once: nx-loopback
+  backends.update(_get_backends("networkx.backends"))
+/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/tensorpowerflow/utils.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+/gpfs/home4/wxia/Prob-for-PPF
+/gpfs/home4/wxia/Prob-for-PPF
+Default case loaded.
+Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    /gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/sklearn/base.py:380: InconsistentVersionWarning: Trying to unpickle estimator GaussianMixture from version 1.7.1 when using version 1.6.1. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+wandb: Currently logged in as: xiaweijie1996 (weijie_xia) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin

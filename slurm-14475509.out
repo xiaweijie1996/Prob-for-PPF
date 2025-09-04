@@ -1,199 +1,0 @@
-Host: gcn48.local.snellius.surf.nl
-Thu Sep  4 11:16:04 2025       
-+-----------------------------------------------------------------------------------------+
-| NVIDIA-SMI 575.57.08              Driver Version: 575.57.08      CUDA Version: 12.9     |
-|-----------------------------------------+------------------------+----------------------+
-| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
-|                                         |                        |               MIG M. |
-|=========================================+========================+======================|
-|   0  NVIDIA A100-SXM4-40GB          On  |   00000000:CA:00.0 Off |                    0 |
-| N/A   30C    P0             47W /  400W |       0MiB /  40960MiB |      0%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-                                                                                         
-+-----------------------------------------------------------------------------------------+
-| Processes:                                                                              |
-|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
-|        ID   ID                                                               Usage      |
-|=========================================================================================|
-|  No running processes found                                                             |
-+-----------------------------------------------------------------------------------------+
-torch 2.8.0+cu128 cuda? True
-/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/networkx/utils/backends.py:135: RuntimeWarning: networkx backend defined more than once: nx-loopback
-  backends.update(_get_backends("networkx.backends"))
-/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/tensorpowerflow/utils.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
-  import pkg_resources
-/gpfs/home4/wxia/Prob-for-PPF
-/gpfs/home4/wxia/Prob-for-PPF
-Default case loaded.
-Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    /gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/sklearn/base.py:380: InconsistentVersionWarning: Trying to unpickle estimator GaussianMixture from version 1.7.1 when using version 1.6.1. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
-https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
-  warnings.warn(
-wandb: Currently logged in as: xiaweijie1996 (weijie_xia) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
-wandb: Tracking run with wandb version 0.21.1
-wandb: Run data is saved locally in /gpfs/home4/wxia/Prob-for-PPF/wandb/run-20250904_111634-vkrkm2kt
-wandb: Run `wandb offline` to turn off syncing.
-wandb: Syncing run lively-durian-17
-wandb: ⭐️ View project at https://wandb.ai/weijie_xia/CRealnvp-node-34
-wandb: 🚀 View run at https://wandb.ai/weijie_xia/CRealnvp-node-34/runs/vkrkm2kt
-Model Parameters: 3975188
-Loaded scalers from: src/powersystems/psdistribution/34node/scalers.pkl
-Sampled 100 data from GMM, mean: 40.85162184600675, std: 32.91781043082725, shape: (100, 66)
-Loaded GMM from: src/powersystems/psdistribution/34node/gmm_power.pkl
-Loaded model from src/training/crealnvp/savedmodel/CRealnvpmodel_34.pth
-Epoch 1, Loss Forward: 0.013669, Loss Backward: 0.118601, Jacobean: 0.086014, Percentage Error Magnitude: 0.021365, Percentage Error Angle: 0.005974
-Epoch 2, Loss Forward: 0.023353, Loss Backward: 0.325569, Jacobean: 0.083102, Percentage Error Magnitude: 0.020869, Percentage Error Angle: 0.025837
-Epoch 3, Loss Forward: 0.020362, Loss Backward: 0.169095, Jacobean: 0.083504, Percentage Error Magnitude: 0.036171, Percentage Error Angle: 0.004553
-Epoch 4, Loss Forward: 0.019609, Loss Backward: 0.120964, Jacobean: 0.123137, Percentage Error Magnitude: 0.030166, Percentage Error Angle: 0.009052
-Epoch 5, Loss Forward: 0.020528, Loss Backward: 0.109695, Jacobean: 0.128118, Percentage Error Magnitude: 0.030009, Percentage Error Angle: 0.011047
-Epoch 6, Loss Forward: 0.020201, Loss Backward: 0.311374, Jacobean: 0.083549, Percentage Error Magnitude: 0.028785, Percentage Error Angle: 0.011617
-Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]             Epoch 7, Loss Forward: 0.025135, Loss Backward: 0.226955, Jacobean: 0.083185, Percentage Error Magnitude: 0.040131, Percentage Error Angle: 0.010138
-Epoch 8, Loss Forward: 0.027996, Loss Backward: 0.142336, Jacobean: 0.136446, Percentage Error Magnitude: 0.045310, Percentage Error Angle: 0.010681
-Epoch 9, Loss Forward: 0.028216, Loss Backward: 0.141153, Jacobean: 0.123961, Percentage Error Magnitude: 0.040834, Percentage Error Angle: 0.015597
-Epoch 10, Loss Forward: 0.027219, Loss Backward: 0.138785, Jacobean: 0.140509, Percentage Error Magnitude: 0.032503, Percentage Error Angle: 0.021935
-Epoch 11, Loss Forward: 0.025313, Loss Backward: 0.247085, Jacobean: 0.098465, Percentage Error Magnitude: 0.030143, Percentage Error Angle: 0.020483
-Epoch 12, Loss Forward: 0.027095, Loss Backward: 0.250456, Jacobean: 0.097844, Percentage Error Magnitude: 0.033712, Percentage Error Angle: 0.020477
-Epoch 13, Loss Forward: 0.043628, Loss Backward: 0.122572, Jacobean: 0.218365, Percentage Error Magnitude: 0.046119, Percentage Error Angle: 0.041137
-                                       Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|      Epoch 14, Loss Forward: 0.031549, Loss Backward: 0.134130, Jacobean: 0.156671, Percentage Error Magnitude: 0.046078, Percentage Error Angle: 0.017020
-Epoch 15, Loss Forward: 0.021035, Loss Backward: 0.199876, Jacobean: 0.107758, Percentage Error Magnitude: 0.029942, Percentage Error Angle: 0.012129
-Epoch 16, Loss Forward: 0.027138, Loss Backward: 0.227587, Jacobean: 0.120954, Percentage Error Magnitude: 0.038780, Percentage Error Angle: 0.015496
-Epoch 17, Loss Forward: 0.022319, Loss Backward: 0.218798, Jacobean: 0.109841, Percentage Error Magnitude: 0.030931, Percentage Error Angle: 0.013708
-Epoch 18, Loss Forward: 0.028480, Loss Backward: 0.106003, Jacobean: 0.225130, Percentage Error Magnitude: 0.039092, Percentage Error Angle: 0.017868
-Epoch 19, Loss Forward: 0.033185, Loss Backward: 0.159110, Jacobean: 0.178621, Percentage Error Magnitude: 0.044185, Percentage Error Angle: 0.022185
-Epoch 20, Loss Forward: 0.028480, Loss Backward: 0.103124, Jacobean: 0.215675, Percentage Error Magnitude: 0.041039, Percentage Error Angle: 0.015921
-    | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00Epoch 21, Loss Forward: 0.019590, Loss Backward: 0.170422, Jacobean: 0.108774, Percentage Error Magnitude: 0.029380, Percentage Error Angle: 0.009800
-Epoch 22, Loss Forward: 0.022124, Loss Backward: 0.083235, Jacobean: 0.196293, Percentage Error Magnitude: 0.034240, Percentage Error Angle: 0.010009
-Epoch 23, Loss Forward: 0.024807, Loss Backward: 0.119608, Jacobean: 0.147477, Percentage Error Magnitude: 0.039727, Percentage Error Angle: 0.009887
-Epoch 24, Loss Forward: 0.024561, Loss Backward: 0.086839, Jacobean: 0.202374, Percentage Error Magnitude: 0.032735, Percentage Error Angle: 0.016388
-Epoch 25, Loss Forward: 0.018258, Loss Backward: 0.194094, Jacobean: 0.111249, Percentage Error Magnitude: 0.026286, Percentage Error Angle: 0.010231
-Epoch 26, Loss Forward: 0.018475, Loss Backward: 0.143414, Jacobean: 0.124618, Percentage Error Magnitude: 0.024091, Percentage Error Angle: 0.012858
-:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                             Epoch 27, Loss Forward: 0.025831, Loss Backward: 0.086918, Jacobean: 0.209531, Percentage Error Magnitude: 0.033925, Percentage Error Angle: 0.017737
-Epoch 28, Loss Forward: 0.020555, Loss Backward: 0.082641, Jacobean: 0.169720, Percentage Error Magnitude: 0.030930, Percentage Error Angle: 0.010180
-Epoch 29, Loss Forward: 0.024538, Loss Backward: 0.118882, Jacobean: 0.164617, Percentage Error Magnitude: 0.036502, Percentage Error Angle: 0.012573
-Epoch 30, Loss Forward: 0.023730, Loss Backward: 0.129383, Jacobean: 0.151359, Percentage Error Magnitude: 0.036019, Percentage Error Angle: 0.011441
-Epoch 31, Loss Forward: 0.019896, Loss Backward: 0.078832, Jacobean: 0.188763, Percentage Error Magnitude: 0.028283, Percentage Error Angle: 0.011510
-Epoch 32, Loss Forward: 0.022689, Loss Backward: 0.210246, Jacobean: 0.101683, Percentage Error Magnitude: 0.030874, Percentage Error Angle: 0.014503
-Epoch 33, Loss Forward: 0.028252, Loss Backward: 0.080487, Jacobean: 0.212930, Percentage Error Magnitude: 0.035517, Percentage Error Angle: 0.020987
-       Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]     Epoch 34, Loss Forward: 0.020808, Loss Backward: 0.169487, Jacobean: 0.115949, Percentage Error Magnitude: 0.032264, Percentage Error Angle: 0.009352
-Epoch 35, Loss Forward: 0.027770, Loss Backward: 0.096521, Jacobean: 0.170863, Percentage Error Magnitude: 0.043631, Percentage Error Angle: 0.011909
-Epoch 36, Loss Forward: 0.020505, Loss Backward: 0.137667, Jacobean: 0.114723, Percentage Error Magnitude: 0.033297, Percentage Error Angle: 0.007713
-Epoch 37, Loss Forward: 0.018622, Loss Backward: 0.113349, Jacobean: 0.122828, Percentage Error Magnitude: 0.029065, Percentage Error Angle: 0.008180
-Epoch 38, Loss Forward: 0.018407, Loss Backward: 0.106963, Jacobean: 0.133665, Percentage Error Magnitude: 0.028741, Percentage Error Angle: 0.008074
-Epoch 39, Loss Forward: 0.026718, Loss Backward: 0.132024, Jacobean: 0.118833, Percentage Error Magnitude: 0.041762, Percentage Error Angle: 0.011674
-Epoch 40, Loss Forward: 0.023736, Loss Backward: 0.118603, Jacobean: 0.129237, Percentage Error Magnitude: 0.037910, Percentage Error Angle: 0.009561
-                                               Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0Epoch 41, Loss Forward: 0.017471, Loss Backward: 0.106096, Jacobean: 0.124764, Percentage Error Magnitude: 0.027362, Percentage Error Angle: 0.007580
-Epoch 42, Loss Forward: 0.019577, Loss Backward: 0.181737, Jacobean: 0.096918, Percentage Error Magnitude: 0.030147, Percentage Error Angle: 0.009008
-Epoch 43, Loss Forward: 0.028956, Loss Backward: 0.149596, Jacobean: 0.144340, Percentage Error Magnitude: 0.041355, Percentage Error Angle: 0.016556
-Epoch 44, Loss Forward: 0.023948, Loss Backward: 0.154644, Jacobean: 0.124426, Percentage Error Magnitude: 0.036425, Percentage Error Angle: 0.011471
-Epoch 45, Loss Forward: 0.018229, Loss Backward: 0.126642, Jacobean: 0.121433, Percentage Error Magnitude: 0.027858, Percentage Error Angle: 0.008600
-Epoch 46, Loss Forward: 0.020905, Loss Backward: 0.130500, Jacobean: 0.121134, Percentage Error Magnitude: 0.033136, Percentage Error Angle: 0.008674
-Epoch 47, Loss Forward: 0.019857, Loss Backward: 0.152188, Jacobean: 0.113681, Percentage Error Magnitude: 0.033631, Percentage Error Angle: 0.006084
-%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          |Epoch 48, Loss Forward: 0.023716, Loss Backward: 0.208978, Jacobean: 0.098208, Percentage Error Magnitude: 0.037082, Percentage Error Angle: 0.010349
-Epoch 49, Loss Forward: 0.023511, Loss Backward: 0.137592, Jacobean: 0.131202, Percentage Error Magnitude: 0.038228, Percentage Error Angle: 0.008793
-Epoch 50, Loss Forward: 0.021895, Loss Backward: 0.218952, Jacobean: 0.095116, Percentage Error Magnitude: 0.033482, Percentage Error Angle: 0.010309
-Epoch 51, Loss Forward: 0.021986, Loss Backward: 0.123858, Jacobean: 0.127648, Percentage Error Magnitude: 0.035705, Percentage Error Angle: 0.008267
-Epoch 52, Loss Forward: 0.022645, Loss Backward: 0.085527, Jacobean: 0.171021, Percentage Error Magnitude: 0.035377, Percentage Error Angle: 0.009913
-Epoch 53, Loss Forward: 0.018535, Loss Backward: 0.101002, Jacobean: 0.124595, Percentage Error Magnitude: 0.032263, Percentage Error Angle: 0.004807
- 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                     Epoch 54, Loss Forward: 0.017456, Loss Backward: 0.114068, Jacobean: 0.115011, Percentage Error Magnitude: 0.029698, Percentage Error Angle: 0.005214
-Epoch 55, Loss Forward: 0.026129, Loss Backward: 0.106745, Jacobean: 0.176859, Percentage Error Magnitude: 0.042153, Percentage Error Angle: 0.010105
-Epoch 56, Loss Forward: 0.018345, Loss Backward: 0.363454, Jacobean: 0.087073, Percentage Error Magnitude: 0.027082, Percentage Error Angle: 0.009607
-Epoch 57, Loss Forward: 0.018376, Loss Backward: 0.140668, Jacobean: 0.101366, Percentage Error Magnitude: 0.030557, Percentage Error Angle: 0.006196
-Epoch 58, Loss Forward: 0.017480, Loss Backward: 0.143606, Jacobean: 0.112958, Percentage Error Magnitude: 0.026177, Percentage Error Angle: 0.008783
-Epoch 59, Loss Forward: 0.017897, Loss Backward: 0.114923, Jacobean: 0.130899, Percentage Error Magnitude: 0.028634, Percentage Error Angle: 0.007160
-Epoch 60, Loss Forward: 0.025971, Loss Backward: 0.096302, Jacobean: 0.200066, Percentage Error Magnitude: 0.039476, Percentage Error Angle: 0.012465
-               Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/Epoch 61, Loss Forward: 0.022776, Loss Backward: 0.252027, Jacobean: 0.113395, Percentage Error Magnitude: 0.031670, Percentage Error Angle: 0.013882
-Epoch 62, Loss Forward: 0.022782, Loss Backward: 0.110357, Jacobean: 0.167205, Percentage Error Magnitude: 0.035285, Percentage Error Angle: 0.010279
-Epoch 63, Loss Forward: 0.023196, Loss Backward: 0.099809, Jacobean: 0.189373, Percentage Error Magnitude: 0.034270, Percentage Error Angle: 0.012123
-Epoch 64, Loss Forward: 0.022743, Loss Backward: 0.147045, Jacobean: 0.132011, Percentage Error Magnitude: 0.032090, Percentage Error Angle: 0.013396
-Epoch 65, Loss Forward: 0.017033, Loss Backward: 0.171799, Jacobean: 0.109481, Percentage Error Magnitude: 0.026199, Percentage Error Angle: 0.007866
-Epoch 66, Loss Forward: 0.022733, Loss Backward: 0.148681, Jacobean: 0.131062, Percentage Error Magnitude: 0.031811, Percentage Error Angle: 0.013656
-Epoch 67, Loss Forward: 0.051928, Loss Backward: 0.106897, Jacobean: 0.220050, Percentage Error Magnitude: 0.037502, Percentage Error Angle: 0.066355
-s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 oEpoch 68, Loss Forward: 0.050405, Loss Backward: 0.110791, Jacobean: 0.236630, Percentage Error Magnitude: 0.035742, Percentage Error Angle: 0.065067
-Epoch 69, Loss Forward: 0.024696, Loss Backward: 0.107212, Jacobean: 0.155593, Percentage Error Magnitude: 0.028762, Percentage Error Angle: 0.020631
-Epoch 70, Loss Forward: 0.021233, Loss Backward: 0.146920, Jacobean: 0.121548, Percentage Error Magnitude: 0.034437, Percentage Error Angle: 0.008029
-Epoch 71, Loss Forward: 0.020370, Loss Backward: 0.211605, Jacobean: 0.110616, Percentage Error Magnitude: 0.030310, Percentage Error Angle: 0.010431
-Epoch 72, Loss Forward: 0.018070, Loss Backward: 0.109979, Jacobean: 0.137352, Percentage Error Magnitude: 0.028799, Percentage Error Angle: 0.007342
-Epoch 73, Loss Forward: 0.023354, Loss Backward: 0.212210, Jacobean: 0.103748, Percentage Error Magnitude: 0.036191, Percentage Error Angle: 0.010516
-Epoch 74, Loss Forward: 0.022276, Loss Backward: 0.114791, Jacobean: 0.135368, Percentage Error Magnitude: 0.038038, Percentage Error Angle: 0.006515
-f 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|   Epoch 75, Loss Forward: 0.024822, Loss Backward: 0.094049, Jacobean: 0.180963, Percentage Error Magnitude: 0.038959, Percentage Error Angle: 0.010686
-Epoch 76, Loss Forward: 0.022018, Loss Backward: 0.111552, Jacobean: 0.147868, Percentage Error Magnitude: 0.037039, Percentage Error Angle: 0.006997
-Epoch 77, Loss Forward: 0.024050, Loss Backward: 0.110363, Jacobean: 0.153433, Percentage Error Magnitude: 0.041067, Percentage Error Angle: 0.007033
-Epoch 78, Loss Forward: 0.026543, Loss Backward: 0.134568, Jacobean: 0.121965, Percentage Error Magnitude: 0.044963, Percentage Error Angle: 0.008124
-Epoch 79, Loss Forward: 0.019347, Loss Backward: 0.091585, Jacobean: 0.141762, Percentage Error Magnitude: 0.031590, Percentage Error Angle: 0.007105
-Epoch 80, Loss Forward: 0.031160, Loss Backward: 0.150431, Jacobean: 0.153004, Percentage Error Magnitude: 0.050155, Percentage Error Angle: 0.012164
-       | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                             Epoch 81, Loss Forward: 0.033746, Loss Backward: 0.088040, Jacobean: 0.215086, Percentage Error Magnitude: 0.053481, Percentage Error Angle: 0.014011
-Epoch 82, Loss Forward: 0.030038, Loss Backward: 0.127213, Jacobean: 0.149603, Percentage Error Magnitude: 0.049065, Percentage Error Angle: 0.011010
-Epoch 83, Loss Forward: 0.027070, Loss Backward: 0.081814, Jacobean: 0.195885, Percentage Error Magnitude: 0.042145, Percentage Error Angle: 0.011994
-Epoch 84, Loss Forward: 0.026419, Loss Backward: 0.155784, Jacobean: 0.128633, Percentage Error Magnitude: 0.039990, Percentage Error Angle: 0.012848
-Epoch 85, Loss Forward: 0.024789, Loss Backward: 0.066152, Jacobean: 0.229217, Percentage Error Magnitude: 0.038472, Percentage Error Angle: 0.011107
-Epoch 86, Loss Forward: 0.024730, Loss Backward: 0.205954, Jacobean: 0.105107, Percentage Error Magnitude: 0.033329, Percentage Error Angle: 0.016130
-Epoch 87, Loss Forward: 0.030801, Loss Backward: 0.080649, Jacobean: 0.223965, Percentage Error Magnitude: 0.050069, Percentage Error Angle: 0.011532
-                       Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00Epoch 88, Loss Forward: 0.019870, Loss Backward: 0.083009, Jacobean: 0.157838, Percentage Error Magnitude: 0.032284, Percentage Error Angle: 0.007456
-Epoch 89, Loss Forward: 0.020056, Loss Backward: 0.117221, Jacobean: 0.115362, Percentage Error Magnitude: 0.030425, Percentage Error Angle: 0.009688
-Epoch 90, Loss Forward: 0.025291, Loss Backward: 0.182762, Jacobean: 0.107223, Percentage Error Magnitude: 0.036049, Percentage Error Angle: 0.014532
-Epoch 91, Loss Forward: 0.023625, Loss Backward: 0.098037, Jacobean: 0.165683, Percentage Error Magnitude: 0.037960, Percentage Error Angle: 0.009290
-Epoch 92, Loss Forward: 0.021775, Loss Backward: 0.168288, Jacobean: 0.100071, Percentage Error Magnitude: 0.029485, Percentage Error Angle: 0.014066
-Epoch 93, Loss Forward: 0.021290, Loss Backward: 0.108242, Jacobean: 0.146784, Percentage Error Magnitude: 0.031951, Percentage Error Angle: 0.010629
-Epoch 94, Loss Forward: 0.027042, Loss Backward: 0.125195, Jacobean: 0.146522, Percentage Error Magnitude: 0.042924, Percentage Error Angle: 0.011161
-<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]ChEpoch 95, Loss Forward: 0.027294, Loss Backward: 0.107132, Jacobean: 0.117764, Percentage Error Magnitude: 0.039280, Percentage Error Angle: 0.015308
-Epoch 96, Loss Forward: 0.025225, Loss Backward: 0.079798, Jacobean: 0.171389, Percentage Error Magnitude: 0.039399, Percentage Error Angle: 0.011050
-Epoch 97, Loss Forward: 0.029065, Loss Backward: 0.102339, Jacobean: 0.163980, Percentage Error Magnitude: 0.045742, Percentage Error Angle: 0.012388
-Epoch 98, Loss Forward: 0.022358, Loss Backward: 0.210729, Jacobean: 0.098475, Percentage Error Magnitude: 0.031333, Percentage Error Angle: 0.013384
-Epoch 99, Loss Forward: 0.021766, Loss Backward: 0.090587, Jacobean: 0.146693, Percentage Error Magnitude: 0.032589, Percentage Error Angle: 0.010943
-Epoch 100, Loss Forward: 0.023766, Loss Backward: 0.185802, Jacobean: 0.100147, Percentage Error Magnitude: 0.035859, Percentage Error Angle: 0.011673
-Epoch 101, Loss Forward: 0.019442, Loss Backward: 0.097712, Jacobean: 0.125207, Percentage Error Magnitude: 0.031489, Percentage Error Angle: 0.007395
-saved at epoch 101 with loss 0.019441913948043735
-unk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    wandb: ERROR plotly is required to log interactive plots, install with: `pip install plotly` or convert the plot to an image with `wandb.Image(plt)`
-Traceback (most recent call last):
-  File "/gpfs/home4/wxia/Prob-for-PPF/src/training/crealnvp/main_34.py", line 236, in <module>
-    main()
-  File "/gpfs/home4/wxia/Prob-for-PPF/src/training/crealnvp/main_34.py", line 229, in main
-    wb.log({"CRealnvp_gen": fig})
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/sdk/wandb_run.py", line 399, in wrapper
-    return func(self, *args, **kwargs)
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/sdk/wandb_run.py", line 457, in wrapper_fn
-    return func(self, *args, **kwargs)
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/sdk/wandb_run.py", line 444, in wrapper
-    return func(self, *args, **kwargs)
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/sdk/wandb_run.py", line 2016, in log
-    self._log(data=data, step=step, commit=commit)
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/sdk/wandb_run.py", line 1727, in _log
-    self._partial_history_callback(data, step, commit)
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/sdk/wandb_run.py", line 399, in wrapper
-    return func(self, *args, **kwargs)
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/sdk/wandb_run.py", line 1554, in _partial_history_callback
-    self._backend.interface.publish_partial_history(
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/sdk/interface/interface.py", line 682, in publish_partial_history
-    data = history_dict_to_json(run, data, step=user_step, ignore_copy_err=True)
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/sdk/data_types/utils.py", line 54, in history_dict_to_json
-    payload[key] = val_to_json(
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/sdk/data_types/utils.py", line 88, in val_to_json
-    val = Plotly.make_plot_media(val)
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/sdk/data_types/plotly.py", line 49, in make_plot_media
-    val = util.matplotlib_to_plotly(val)
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/util.py", line 548, in matplotlib_to_plotly
-    tools = get_module(
-  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/wandb/util.py", line 254, in get_module
-    raise wandb.Error(required)
-wandb.errors.errors.Error: plotly is required to log interactive plots, install with: `pip install plotly` or convert the plot to an image with `wandb.Image(plt)`
-[1;34mwandb[0m: 
-[1;34mwandb[0m: 🚀 View run [33mlively-durian-17[0m at: [34mhttps://wandb.ai/weijie_xia/CRealnvp-node-34/runs/vkrkm2kt[0m
-[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20250904_111634-vkrkm2kt/logs[0m
-srun: error: gcn48: task 0: Exited with exit code 1
-srun: Terminating StepId=14475509.0
-
-JOB STATISTICS
-==============
-Job ID: 14475509
-Cluster: snellius
-User/Group: wxia/wxia
-State: RUNNING
-Nodes: 1
-Cores per node: 18
-CPU Utilized: 00:00:00
-CPU Efficiency: 0.00% of 00:20:06 core-walltime
-Job Wall-clock time: 00:01:07
-Memory Utilized: 0.00 MB
-Memory Efficiency: 0.00% of 40.00 GB (40.00 GB/node)
-WARNING: Efficiency statistics can only be obtained after the job has ended as seff tool is based on the accounting database data.
