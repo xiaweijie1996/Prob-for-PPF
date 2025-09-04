@@ -47,4 +47,4 @@ CRealnvp:
   lr: 0.001
   epochs: 500000
   save_path:  'src/training/crealnvp/savedmodel'
-  forward_loss_ratio:  0.1
+  forward_loss_ratio:  0.5

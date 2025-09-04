@@ -79,7 +79,7 @@ def main():
     print("Loaded GMM from:", dis_path)
     
     # Define the optimizer
-    optimizer = torch.optim.Adam(realnvp_model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(realnvp_model.parameters(), lr=lr)
     
     # Define the loss function
     loss_function = torch.nn.MSELoss()
@@ -157,12 +157,12 @@ def main():
         loss_forward = loss_function(output_voltage, output_y)
         
         # Compute the std of backward output_power and input_x for normalization
-        std_input_x = torch.std(input_x, dim=0) # shape (2,)
-        std_output_power = torch.std(output_power, dim=0) # shape (2,)
-        distribution_loss = torch.abs(std_output_power - std_input_x).mean()
+        # std_input_x = torch.std(input_x, dim=0) # shape (2,)
+        # std_output_power = torch.std(output_power, dim=0) # shape (2,)
+        # distribution_loss = torch.abs(std_output_power - std_input_x).mean()
         
         # Loss
-        loss = loss_forward * forward_loss_ratio + loss_backward * (1 - forward_loss_ratio) + distribution_loss
+        loss = loss_forward * forward_loss_ratio + loss_backward * (1 - forward_loss_ratio) # + distribution_loss
     
         # Add weight clipping to avoid NaN
         torch.nn.utils.clip_grad_norm_(realnvp_model.parameters(), max_norm=0.5)
@@ -186,7 +186,7 @@ def main():
             "epoch": _+1,
             "percentage_error_magnitude": loss_mangitude.item(),
             "percentage_error_angle": loss_angle.item(),
-            "distribution_loss": distribution_loss.item()
+            # "distribution_loss": distribution_loss.item()
         })
         
         # Save the model every 100 epochs

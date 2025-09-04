@@ -75,7 +75,9 @@ class CRealnvpBasic(torch.nn.Module):
         )
         
         # Define a special token for null condition
+        self.vector = torch.nn.Parameter(torch.randn(1, self.input_dim))
         self.null_token = torch.nn.Parameter(torch.randn(1, self.hidden_dim_condition))
+        self.vectorcontrain = self.adjusted_sigmoid
         self.constrain = self.adjusted_sigmoid
         
     def add_pe_and_null_to_c(self, c, index_p, index_v, postional_encoding=False):
@@ -153,10 +155,23 @@ class CRealnvpBasic(torch.nn.Module):
         x3 = torch.cat([x31, x32], dim=-1)
         det_ja = torch.abs(_det_ja1 * _det_ja2)
         
+        # Make vector multiplication
+        scaler = self.vectorcontrain(self.vector.to(x3.device))
+        scaler = scaler.expand(x3.shape[0], -1)  # Expand to match batch size
+        x3 = x3 * scaler
+        
+        det_ja = det_ja * torch.abs(torch.cumprod(scaler, dim=1))[:,-1] # Return the Jacobian determinant as well
+        
         return x3, det_ja
     
     def inverse(self, x3, c, index_p, index_v, postional_encoding=False):
         c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v, postional_encoding=postional_encoding)
+        
+        # Make vector multiplication
+        scaler = self.vectorcontrain(self.vector.to(x3.device))
+        scaler = scaler.expand(x3.shape[0], -1)  # Expand to match batch size
+        x3 = x3 / scaler
+        _det_ja0 = torch.cumprod(1/scaler, dim=1)[:,-1]
         
         # Split the input tensor
         x31, x32 = x3[:, :self.split_dim1], x3[:, self.split_dim1:]
@@ -177,7 +192,7 @@ class CRealnvpBasic(torch.nn.Module):
         
         # Final output
         x = torch.cat([x11, x12], dim=-1)
-        det_ja = torch.abs(_det_ja1 * _det_ja2)
+        det_ja = torch.abs(_det_ja1 * _det_ja2 * _det_ja0)
         
         return x, det_ja
     
