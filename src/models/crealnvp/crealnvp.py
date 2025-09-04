@@ -228,15 +228,15 @@ if __name__ == "__main__":
     c_dim = 100
     index_v = 1
     index_p = 2
-    batch_size = 400
+    batch_size = 4000
     
     model = CRealnvpModel(
         input_dim=test_dim,
         condition_dim=c_dim,
         n_blocks=3
     )
-    x = torch.randn(batch_size, test_dim)
-    c = torch.randn(batch_size, c_dim)
+    x = torch.randn(batch_size, test_dim)*10
+    c = torch.randn(batch_size, c_dim)*10
     
     # Forward pass
     y, ja = model.forward(x, c, index_p=index_p, index_v=index_v)
