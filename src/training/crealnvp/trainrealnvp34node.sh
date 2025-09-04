@@ -1,15 +1,27 @@
 #!/bin/bash
-#Set job requirements
-#SBATCH --job-name="RealNVP34"
-#SBATCH --partition=gpu_a100
-#SBATCH --time=99:00:00
+#SBATCH -J RealNVP34
+#SBATCH -p gpu_a100          # change to a listed partition if different
+#SBATCH -t 99:00:00
+#SBATCH -N 1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
-#SBATCH --gpus-per-task=1
-#SBATCH --mem-per-cpu=8G
-#SBATCH --account=research-eemcs-ese
+#SBATCH --gpus=1             # one full A100 on gpu_a100; on gpu_mig this is one MIG
+#SBATCH --mem=40G
 
-module load 2023r1 
-module load cuda/11.6
+# set -euo pipefail
 
-srun src/training/crealnvp/main_34.py
+# module purge
+module load 2023             # framework toolchain family (use the one you have)
+# See which CUDA/Python are available, then load exact versions:
+# module avail CUDA
+# module avail Python
+module load CUDA/11.8.0      # adjust to an available version on your system
+module load Python/3.10.4-GCCcore-11.3.0  # example from SURF docs; adjust if needed
+
+# export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+# echo "Host: $(hostname)"
+# echo "CUDA devices:"
+# nvidia-smi || true
+
+# Run your program (use python, not a bare .py with srun)
+srun python src/training/crealnvp/main_34.py
