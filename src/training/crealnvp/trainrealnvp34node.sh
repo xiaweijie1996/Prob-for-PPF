@@ -11,17 +11,8 @@
 # set -euo pipefail
 
 # module purge
-module load 2023             # framework toolchain family (use the one you have)
-# See which CUDA/Python are available, then load exact versions:
-# module avail CUDA
-# module avail Python
-module load CUDA/11.8.0      # adjust to an available version on your system
+module load 2023          # framework toolchain family (use the one you have)
 module load Python/3.10.4-GCCcore-11.3.0  # example from SURF docs; adjust if needed
-
-# export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-# echo "Host: $(hostname)"
-# echo "CUDA devices:"
-# nvidia-smi || true
 
 # Run your program (use python, not a bare .py with srun)
 srun python src/training/crealnvp/main_34.py
