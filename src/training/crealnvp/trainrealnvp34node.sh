@@ -19,7 +19,7 @@ module load Python/3.11.3-GCCcore-12.3.0
 # module load PyTorch/2.2.2-foss-2023b-CUDA-12.1.1
 
 # OPTION 2: Use your own virtualenv (comment out if using site PyTorch)
-source ~/venvs/ppf/bin/activate
+source ~Prob-for-PPF/.venvs/bin/activate
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
