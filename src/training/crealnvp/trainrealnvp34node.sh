@@ -1,7 +1,7 @@
 #!/bin/bash
 #Set job requirements
 #SBATCH --job-name="RealNVP34"
-#SBATCH --partition=gpu
+#SBATCH --partition=gpu_a100
 #SBATCH --time=99:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
