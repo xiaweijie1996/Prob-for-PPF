@@ -55,9 +55,9 @@ pandas
 # pytz==2025.2
 # pyyaml==6.0.2
 # requests==2.32.4
-scikit-learn==1.7.1
-scipy==1.15.3
-seaborn==0.13.2
+scikit-learn
+scipy
+seaborn
 # sentry-sdk==2.34.1
 # setuptools==80.9.0
 # six==1.17.0
@@ -65,7 +65,7 @@ seaborn==0.13.2
 # sympy==1.14.0
 # tbb==2022.2.0
 # tcmlib==1.4.0
-tensorpowerflow==0.0.7
+tensorpowerflow
 # threadpoolctl==3.6.0
 torch==2.8.0
 torchvision==0.23.0
