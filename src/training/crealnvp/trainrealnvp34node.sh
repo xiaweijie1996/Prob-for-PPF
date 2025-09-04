@@ -1,19 +1,30 @@
 #!/bin/bash
 #SBATCH -J RealNVP34
-#SBATCH -p gpu_a100          # change to a listed partition if different
+#SBATCH -p gpu_a100           # use a GPU partition that 'sinfo' shows for your account
 #SBATCH -t 99:00:00
 #SBATCH -N 1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
-#SBATCH --gpus=1             # one full A100 on gpu_a100; on gpu_mig this is one MIG
+#SBATCH --gpus-per-node=1
 #SBATCH --mem=40G
 
-# set -euo pipefail
+set -euo pipefail
 
-# module purge
-module load 2023r1 
-module load cuda/11.6
+module purge
+module load 2023               # or 2023r1 if that’s the right family
+module load CUDA/12.1.1        # pick the version you actually have
+module load Python/3.10.8-GCCcore-12.2.0
 
+# OPTION 1: Use site PyTorch module (if available)
+# module load PyTorch/2.2.2-foss-2023b-CUDA-12.1.1
+
+# OPTION 2: Use your own virtualenv (comment out if using site PyTorch)
 source ~/venvs/ppf/bin/activate
-# Run your program (use python, not a bare .py with srun)
-srun python src/training/crealnvp/main_34.py
+
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
+echo "Host: $(hostname)"
+nvidia-smi || true
+python -c "import torch; print('torch', torch.__version__, 'cuda?', torch.cuda.is_available())"
+
+srun python /gpfs/home4/wxia/Prob-for-PPF/src/training/crealnvp/main_34.py
