@@ -13,7 +13,7 @@ set -euo pipefail
 module purge
 module load 2023               # or 2023r1 if that’s the right family
 module load CUDA/12.1.1        # pick the version you actually have
-module load Python/3.10.8-GCCcore-12.2.0
+module load Python/3.11.3-GCCcore-12.3.0
 
 # OPTION 1: Use site PyTorch module (if available)
 # module load PyTorch/2.2.2-foss-2023b-CUDA-12.1.1
