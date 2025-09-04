@@ -14,5 +14,6 @@
 module load 2023          # framework toolchain family (use the one you have)
 module load Python/3.10.4-GCCcore-11.3.0  # example from SURF docs; adjust if needed
 
+source ~/venvs/ppf/bin/activate
 # Run your program (use python, not a bare .py with srun)
 srun python src/training/crealnvp/main_34.py
