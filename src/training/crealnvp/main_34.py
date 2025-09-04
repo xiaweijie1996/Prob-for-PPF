@@ -44,6 +44,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     save_path = config['CRealnvp']['save_path']
     lr = config['CRealnvp']['lr']
+    forward_loss_ratio = config['CRealnvp'].get('forward_loss_ratio', 1.0)  # Default to 1.0 if not specified
     # -----------------------
     
     # Initialize the random system
@@ -158,7 +159,7 @@ def main():
         loss_forward = loss_function(output_voltage, output_y)
         
         # Loss
-        loss = loss_forward + loss_backward
+        loss = loss_forward * forward_loss_ratio + loss_backward * (1 - forward_loss_ratio)
     
         # Add weight clipping to avoid NaN
         torch.nn.utils.clip_grad_norm_(realnvp_model.parameters(), max_norm=1.0)
