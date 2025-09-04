@@ -105,9 +105,7 @@ def main():
         power_sample = gmm.sample(batch_size)[0]
         active_power = power_sample[:, :num_nodes-1]
         reactive_power = power_sample[:, num_nodes-1:]
-        # Log mean of active and reactive power
-        wb.log({"mean_active_power": active_power.mean(), "mean_reactive_power": reactive_power.mean()})
-     
+   
         # Run the power flow analysis
         solution = random_sys.run(active_power=active_power, 
                                     reactive_power=reactive_power)
@@ -158,19 +156,16 @@ def main():
         # Compute the loss
         loss_forward = loss_function(output_voltage, output_y)
         
+        # Compute the std of backward output_power and input_x for normalization
+        std_input_x = torch.std(input_x, dim=0) # shape (2,)
+        std_output_power = torch.std(output_power, dim=0) # shape (2,)
+        distribution_loss = torch.abs(std_output_power - std_input_x).mean()
+        
         # Loss
-        loss = loss_forward * forward_loss_ratio + loss_backward * (1 - forward_loss_ratio)
+        loss = loss_forward * forward_loss_ratio + loss_backward * (1 - forward_loss_ratio) + distribution_loss
     
         # Add weight clipping to avoid NaN
-        torch.nn.utils.clip_grad_norm_(realnvp_model.parameters(), max_norm=1.0)
-        
-        # log the clip frequency
-        # total_norm = 0.0
-        # for p in realnvp_model.parameters():
-        #     param_norm = p.grad.data.norm(2)
-        #     total_norm += param_norm.item() ** 2
-        # total_norm = total_norm ** (1. / 2)
-        # wb.log({"grad_norm": total_norm})
+        torch.nn.utils.clip_grad_norm_(realnvp_model.parameters(), max_norm=0.5)
         
         # Error
         with torch.no_grad():
@@ -181,7 +176,7 @@ def main():
         loss.backward()
         optimizer.step()
         
-        print(f"Epoch {_+1}, Loss Forward: {loss_forward.item():.6f}, Loss Backward: {loss_backward.item():.6f}, Jacobean: {_ja.mean().item():.6f}, Percentage Error Magnitude: {loss_mangitude.item():.6f}, Percentage Error Angle: {loss_angle.item():.6f}")
+        # print(f"Epoch {_+1}, Loss Forward: {loss_forward.item():.6f}, Loss Backward: {loss_backward.item():.6f}, Jacobean: {_ja.mean().item():.6f}, Percentage Error Magnitude: {loss_mangitude.item():.6f}, Percentage Error Angle: {loss_angle.item():.6f}")
         
         # ----------Log to Weights and Biases
         wb.log({
@@ -190,7 +185,8 @@ def main():
             "jacobian": _ja.mean().item(),
             "epoch": _+1,
             "percentage_error_magnitude": loss_mangitude.item(),
-            "percentage_error_angle": loss_angle.item()
+            "percentage_error_angle": loss_angle.item(),
+            "distribution_loss": distribution_loss.item()
         })
         
         # Save the model every 100 epochs
