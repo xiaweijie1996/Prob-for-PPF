@@ -226,7 +226,7 @@ def main():
             fig.savefig(os.path.join(save_path, f"CRealnvp_gen.png"))
 
             # ✅ log the figure object, not `plt`
-            wb.log({"CRealnvp_gen": fig})
+            # wb.log({"CRealnvp_gen": fig})
 
             plt.close(fig)   # close after logging
 
