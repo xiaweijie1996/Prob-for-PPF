@@ -5,6 +5,7 @@ print(_parent_dir)
 sys.path.append(_parent_dir)
 
 import torch
+import pandas as pd
 import numpy as np
 import wandb as wb
 import pickle 
@@ -17,7 +18,7 @@ from src.powersystems.randomsys import  magnitude_transform, angle_transform
 from src.powersystems.node34 import Node34Example
 
 # Set all torch floats to double precision
-torch.set_default_dtype(torch.float64)
+torch.set_default_dtype(torch.float32)
 
 def main(): 
     # Configureation
@@ -29,46 +30,29 @@ def main():
     dis_path = config['SystemAndDistribution']['dis_path']  # Path to the distribution system file
     scaler_path = config['SystemAndDistribution']['scaler_path']  # Path to save/load the scalers
     
-    split_ratio = config['CSpline']['split_ratio']
-    n_blocks = config['CSpline']['n_blocks']
-    hiddemen_dim = config['CSpline']['hiddemen_dim']
     c_dim = (2 * (num_nodes - 1))  # Condition dimension (P and Q for all nodes except slack)
-    n_layers = config['CSpline']['n_layers']
-    input_dim = config['CSpline']['input_dim']  # Input dimension (P and Q for one node)
-    hiddemen_dim_condition = config['CSpline']['hiddemen_dim_condition']
-    n_layers_condition = config['CSpline']['n_layers_condition']
-    b_interval = config['CSpline']['b_interval']
-    k_bins = config['CSpline']['k_bins']
+    hiddemen_dim = config['Gnn']['hiddemen_dim']
+    n_layers = config['Gnn']['n_layers']
     
-    
-    batch_size = config['CSpline']['batch_size']
-    epochs = config['CSpline']['epochs']
+    batch_size = config['Gnn']['batch_size']
+    epochs = config['Gnn']['epochs']
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    save_path = config['CSpline']['save_path']
-    lr = config['CSpline']['lr']
-    forward_loss_ratio = config['CSpline'].get('forward_loss_ratio', 1.0)  # Default to 1.0 if not specified
-    
+    save_path = config['Gnn']['save_path']
+    lr = config['Gnn']['lr']
     # -----------------------
     
     # Initialize the random system
     random_sys = Node34Example()
 
     # Initialize the NICE model
-    realnvp_model = CSplineModel(
-        input_dim=input_dim,
+    gnn_model = GnnModel(
+        in_dim=c_dim,
         hidden_dim=hiddemen_dim,
-        condition_dim=c_dim,
-        n_layers=n_layers,
-        split_ratio=split_ratio,
-        n_blocks=n_blocks,
-        hidden_dim_condition=hiddemen_dim_condition,
-        n_layers_condition=n_layers_condition,
-        b_interval=b_interval,
-        k_bins=k_bins
-        
+        out_dim=c_dim,
+        num_layers=n_layers
     ).to(device)
-    realnvp_model.double()
-    print(f"Model Parameters: {sum(p.numel() for p in realnvp_model.parameters() if p.requires_grad)}")
+    # gnn_model.double()
+    print(f"Model Parameters: {sum(p.numel() for p in gnn_model.parameters() if p.requires_grad)}")
     
     # Load GMM and Scalers
     # gmm = GaussianMixture(n_components=n_components, covariance_type='full', random_state=42)
@@ -84,26 +68,32 @@ def main():
     print("Loaded GMM from:", dis_path)
     
     # Define the optimizer
-    optimizer = torch.optim.Adam(realnvp_model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(gnn_model.parameters(), lr=lr)
     
     # Define the loss function
     loss_function = torch.nn.MSELoss()
     
     # Initialize Weights and Biases
-    wb.init(project=f"CSpline-node-{num_nodes}")
+    wb.init(project=f"Gnn-node-{num_nodes}")
     
     # Log Model size
-    wb.log({"Model Parameters": sum(p.numel() for p in realnvp_model.parameters() if p.requires_grad)})
+    wb.log({"Model Parameters": sum(p.numel() for p in gnn_model.parameters() if p.requires_grad)})
+    
+    # Edge index for a fully connected graph excluding self-loops
+    system_file = 'src/powersystems/files/Lines_34.csv'
+    edge_index = pd.read_csv(system_file, header=None)
+    edge_index = edge_index.iloc[:, :2].apply(pd.to_numeric, errors='coerce').dropna().values.astype(int)
+    edge_index = torch.tensor(edge_index.T, dtype=torch.long) - 1  # Convert to zero-based index
     
     # Load already trained model if exists
-    model_path = os.path.join(save_path, f"CSplinemodel_{num_nodes}.pth")
+    model_path = os.path.join(save_path, f"Gnnmodel_{num_nodes}.pth")
     if os.path.exists(model_path):
-        realnvp_model.load_state_dict(torch.load(model_path))
+        gnn_model.load_state_dict(torch.load(model_path))
         print(f"Loaded model from {model_path}")
     
     end_loss = 1e6
     for _ in range(epochs):
-        realnvp_model.train()
+        gnn_model.train()
         
         #-------input and target power flow data preparation-------
         # Generate random active and reactive power inputs
@@ -128,104 +118,57 @@ def main():
         active_power = (active_power - scaler['mean_active_power']) / scaler['std_active_power']
         reactive_power = (reactive_power - scaler['mean_reactive_power']) / scaler['std_reactive_power']
         
-        input_power = torch.tensor(np.hstack((active_power, reactive_power)), dtype=torch.float64).to(device)
-        target_voltage = torch.tensor(voltages, dtype=torch.float64).to(device)
-        
-        #-------input and target power flow data preparation-------
-        p_index = torch.randint(0, num_nodes-1, (1,)).item()  # Random index for the power input
-        # q_index = np.arange(0, num_nodes-1)
-        v_index = p_index
-
-        input_x = torch.cat((input_power[:, p_index].unsqueeze(1), input_power[:, p_index+num_nodes-1].unsqueeze(1)), dim=1)  # shape (batch_size, 2)
-        input_c = input_power.clone()
-        
-        output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
-                            target_voltage[:, v_index+num_nodes-1].unsqueeze(1)
-                            ), dim=1)
-        print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
-        
+        input_power = torch.tensor(np.hstack((active_power, reactive_power)), dtype=torch.float32).to(device)
+        target_voltage = torch.tensor(voltages, dtype=torch.float32).to(device)
 
         # ------- training -------
         # Zero the gradients
         optimizer.zero_grad()
         
-        # Power to Voltage
-        output_voltage, _ja1 = realnvp_model.inverse(input_x, input_c, index_p=p_index, index_v=v_index)
-        
         # Voltage to Power
-        output_power, _ja = realnvp_model.forward(output_y, input_c, index_p=p_index, index_v=v_index)
+        print(target_voltage.shape, input_power.shape, edge_index.shape)
+        output_power = gnn_model(target_voltage, edge_index)
         
         # Compute the loss
-        loss_vtp = loss_function(output_power, input_x)
+        loss = loss_function(output_power, input_power)
         
-        # Compute the loss
-        loss_ptv = loss_function(output_voltage, output_y)
-        
-        # Loss
-        loss = loss_vtp * forward_loss_ratio + loss_ptv * (1 - forward_loss_ratio) # + distribution_loss
-    
         # Add weight clipping to avoid NaN
-        torch.nn.utils.clip_grad_norm_(realnvp_model.parameters(), max_norm=0.5)
+        torch.nn.utils.clip_grad_norm_(gnn_model.parameters(), max_norm=0.5)
         
-        # Error
-        with torch.no_grad():
-            loss_mangitude = loss_function(output_voltage[:, 0], output_y[:, 0])
-            loss_angle = loss_function(output_voltage[:, 1], output_y[:, 1])
-    
         # Backward pass and optimization
         loss.backward()
         optimizer.step()
         
-        # print(f"Epoch {_+1}, Loss Forward: {loss_forward.item():.6f}, Loss Backward: {loss_backward.item():.6f}, Jacobean: {_ja.mean().item():.6f}, Percentage Error Magnitude: {loss_mangitude.item():.6f}, Percentage Error Angle: {loss_angle.item():.6f}")
+        print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}")
         
         # ----------Log to Weights and Biases
         wb.log({
-            "loss_ptv": loss_ptv.item(),
-            "loss_vtp": loss_vtp.item(),
-            "jacobian": _ja.mean().item(),
+            "loss_vtp": loss.item(),
             "epoch": _+1,
-            "percentage_error_magnitude": loss_mangitude.item(),
-            "percentage_error_angle": loss_angle.item(),
-            # "distribution_loss": distribution_loss.item()
         })
         
         # Save the model every 100 epochs
-        if (_ + 1) > 1000000 and end_loss > loss_vtp.item():
-            end_loss = loss_vtp.item()
-            torch.save(realnvp_model.state_dict(), os.path.join(save_path, f"CSplinemodel_{num_nodes}.pth"))
+        if (_ + 1) > 1 and end_loss > loss.item():
+            end_loss = loss.item()
+            torch.save(gnn_model.state_dict(), os.path.join(save_path, f"Gnnmodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
             
             # Plot the output vs target for power and voltage for the current p_index
             pre_power = output_power.cpu().detach().numpy()
-            true_power = input_x.cpu().detach().numpy()
-            pre_voltage = output_voltage.cpu().detach().numpy()
-            true_voltage = output_y.cpu().detach().numpy()
+            true_power = input_power.cpu().detach().numpy()
             
-            fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-            axes[0].scatter(true_power[:, 0], true_power[:, 1], label='True Power', alpha=0.1)
-            axes[0].scatter(pre_power[:, 0], pre_power[:, 1], label='Predicted Power', alpha=0.1)
-            axes[0].set_title(f'Active vs Reactive Power at Node {p_index+1}')
-            axes[0].set_xlabel('Active Power (P)')
-            axes[0].set_ylabel('Reactive Power (Q)')
-            axes[0].legend()
-            axes[0].axis('equal')
-
-            axes[1].scatter(true_voltage[:, 0], true_voltage[:, 1], label='True Voltage', alpha=0.1)
-            axes[1].scatter(pre_voltage[:, 0], pre_voltage[:, 1], label='Predicted Voltage', alpha=0.1)
-            axes[1].set_title(f'Voltage Magnitude vs Angle at Node {v_index+1}')
-            axes[1].set_xlabel('Voltage Magnitude (|V|)')
-            axes[1].set_ylabel('Voltage Angle (θ)')
-            axes[1].legend()
-            axes[1].axis('equal')
-
-            fig.tight_layout()
-            fig.savefig(os.path.join(save_path, f"CSpline_gen.png"))
-
-            # ✅ log the figure object, not `plt`
-            # wb.log({"CSpline_gen": fig})
-
-            plt.close(fig)   # close after logging
-
+            # fig.tight_layout()
+            # fig.savefig(os.path.join(save_path, f"Gnn_gen.png"))
+            plt.figure(figsize=(12, 5))
+            plt.scatter(pre_power[:, 0], pre_power[:, num_nodes-1], alpha=0.1)
+            plt.scatter(true_power[:, 0], true_power[:, num_nodes-1], alpha=0.1)
+            plt.xlabel('True Power P ')
+            plt.ylabel('Predicted Power P ')
+            plt.title('Predicted vs True Power P')
+            plt.legend(['Predicted Power P', 'True Power P'])
+            plt.grid(True)
+            plt.savefig(os.path.join(save_path, f"Gnn_power.png"))
+            plt.close()
            
            
 if __name__ == "__main__":
