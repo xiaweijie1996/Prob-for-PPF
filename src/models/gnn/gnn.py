@@ -51,7 +51,7 @@ class GnnModel(nn.Module):
         
     def adjusted_function(self, x):
         # _output = torch.
-        _output = nn.LeakyReLU(0.1)(x)
+        _output = torch.tanh(x) * 5  # Scale to [-0.5, 0.5]
         return _output
     
     def forward(self, x, edge_index):
@@ -68,6 +68,7 @@ if __name__ == "__main__":
     
     x = torch.randn((3, 4))  # [N, Fin]
     model = GnnModel(in_dim=4, hidden_dim=8, out_dim=2, num_layers=3)
+    print(x)
     out = model(x, edge_index)
     print(out)  # [N, Fout]
     print(out.shape)  # should be [3, 2]
