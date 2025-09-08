@@ -309,14 +309,18 @@ class CSplineBasic(torch.nn.Module):
     
 class CSplineModel(torch.nn.Module):
     def __init__(self, 
+                 # input features
                  input_dim: int = 2,
                  hidden_dim: int = 64,
                  condition_dim: int = 12,
+                 
+                 # model features main
                  n_layers: int = 1,
                  split_ratio: float = 0.5,
                  n_blocks: int = 2,
+                 
+                 # model features condition
                  hidden_dim_condition: int = 32,
-                 output_dim_condition: int = 1,
                  n_layers_condition: int = 2,
                  b_interval: float = 5.0,
                  k_bins: int = 10
