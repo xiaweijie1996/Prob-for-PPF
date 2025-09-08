@@ -92,8 +92,8 @@ Gnn:
 NN:
   # Input parameters
   c_dim:  66
-  hiddemen_dim:  398
-  n_layers : 4
+  hiddemen_dim:  860
+  n_layers : 7
 
 
   # Training parameters
