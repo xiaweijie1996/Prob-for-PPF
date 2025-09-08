@@ -74,14 +74,13 @@ CSpline:
   save_path:  'src/training/cspline/savedmodel'
   forward_loss_ratio:  0.5
 
-GNN:
+Gnn:
   # Input parameters
-  input_dim:  2
   c_dim:  66
-  hiddemen_dim:  256
+  hiddemen_dim:  398
   
   # Model features main
-  n_layers:  3
+  n_layers:  4
 
   # Training parameters
   learning_rate:  0.0001
