@@ -77,10 +77,10 @@ CSpline:
 Gnn:
   # Input parameters
   c_dim:  66
-  hiddemen_dim:  398
+  hiddemen_dim:  325
   
   # Model features main
-  n_layers:  4
+  n_layers:  6
 
   # Training parameters
   learning_rate:  0.0001

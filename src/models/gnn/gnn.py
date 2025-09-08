@@ -51,7 +51,7 @@ class GnnModel(nn.Module):
         
     def adjusted_function(self, x):
         # _output = torch.
-        _output = torch.tanh(x) * 5  # Scale to [-0.5, 0.5]
+        _output = nn.LeakyReLU(0.1)(x)
         return _output
     
     def forward(self, x, edge_index):
