@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J RealNVP34
+#SBATCH -J CSpine
 #SBATCH -p gpu_a100           # use a GPU partition that 'sinfo' shows for your account
 #SBATCH -t 99:00:00
 #SBATCH -N 1
