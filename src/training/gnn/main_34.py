@@ -55,7 +55,6 @@ def main():
     print(f"Model Parameters: {sum(p.numel() for p in gnn_model.parameters() if p.requires_grad)}")
     
     # Load GMM and Scalers
-    # gmm = GaussianMixture(n_components=n_components, covariance_type='full', random_state=42)
     with open(dis_path, 'rb') as f:
         gmm = pickle.load(f)  
     with open(scaler_path, 'rb') as f:
@@ -86,10 +85,10 @@ def main():
     edge_index = torch.tensor(edge_index.T, dtype=torch.long).to(device) - 1  # Convert to zero-based index
     
     # Load already trained model if exists
-    model_path = os.path.join(save_path, f"Gnnmodel_{num_nodes}.pth")
-    if os.path.exists(model_path):
-        gnn_model.load_state_dict(torch.load(model_path))
-        print(f"Loaded model from {model_path}")
+    # model_path = os.path.join(save_path, f"Gnnmodel_{num_nodes}.pth")
+    # if os.path.exists(model_path):
+    #     gnn_model.load_state_dict(torch.load(model_path))
+    #     print(f"Loaded model from {model_path}")
     
     end_loss = 1e6
     for _ in range(epochs):
@@ -147,7 +146,7 @@ def main():
         })
         
         # Save the model every 100 epochs
-        if (_ + 1) > 100000 and end_loss > loss.item():
+        if (_ + 1) > 10000 and end_loss > loss.item():
             end_loss = loss.item()
             torch.save(gnn_model.state_dict(), os.path.join(save_path, f"Gnnmodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")

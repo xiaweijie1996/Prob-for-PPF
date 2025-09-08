@@ -57,14 +57,14 @@ CSpline:
 
   # Model features main
   split_ratio:  0.5
-  n_blocks:  4
+  n_blocks:  5
   n_layers:  3
 
   # Model Features condition
-  hiddemen_dim_condition:  316
+  hiddemen_dim_condition:  256
   n_layers_condition:  3
   b_interval:  8.0
-  k_bins:  20
+  k_bins:  10
 
   # Training parameters
   learning_rate:  0.0001
@@ -77,10 +77,10 @@ CSpline:
 Gnn:
   # Input parameters
   c_dim:  66
-  hiddemen_dim:  325
+  hiddemen_dim: 860
   
   # Model features main
-  n_layers:  6
+  n_layers:  7
 
   # Training parameters
   learning_rate:  0.0001
