@@ -83,7 +83,7 @@ def main():
     system_file = 'src/powersystems/files/Lines_34.csv'
     edge_index = pd.read_csv(system_file, header=None)
     edge_index = edge_index.iloc[:, :2].apply(pd.to_numeric, errors='coerce').dropna().values.astype(int)
-    edge_index = torch.tensor(edge_index.T, dtype=torch.long) - 1  # Convert to zero-based index
+    edge_index = torch.tensor(edge_index.T, dtype=torch.long).to(device) - 1  # Convert to zero-based index
     
     # Load already trained model if exists
     model_path = os.path.join(save_path, f"Gnnmodel_{num_nodes}.pth")
@@ -126,7 +126,6 @@ def main():
         optimizer.zero_grad()
         
         # Voltage to Power
-        print(target_voltage.shape, input_power.shape, edge_index.shape)
         output_power = gnn_model(target_voltage, edge_index)
         
         # Compute the loss
@@ -139,7 +138,7 @@ def main():
         loss.backward()
         optimizer.step()
         
-        print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}")
+        # print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}")
         
         # ----------Log to Weights and Biases
         wb.log({
