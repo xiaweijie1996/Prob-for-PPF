@@ -141,7 +141,7 @@ def main():
         })
         
         # Save the model every 100 epochs
-        if (_ + 1) > 1000000 and end_loss > loss.item():
+        if (_ + 1) > 100000 and end_loss > loss.item():
             end_loss = loss.item()
             torch.save(NN_model.state_dict(), os.path.join(save_path, f"NNmodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")

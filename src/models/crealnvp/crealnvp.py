@@ -223,15 +223,29 @@ class CRealnvpModel(torch.nn.Module):
             ) for _ in range(n_blocks)
         ])
         
+        # Defin a vector scaler
+        self.vector = torch.nn.Parameter(torch.randn(1, input_dim))
+    
     def forward(self, x, c, index_p, index_v, postional_encoding=False):
+        # Forward through blocks
         ja = torch.ones((x.shape[0]), device=x.device)
         for block in self.blocks:
             x, _ja = block.forward(x, c, index_p=index_p, index_v=index_v, postional_encoding=postional_encoding)
             ja = ja * _ja
+            
+        # Linear scaling
+        scaler = torch.sigmoid(self.vector.to(x.device)) * 4 -2
+        x = x * scaler 
+        ja = ja * torch.abs(torch.cumprod(scaler, dim=1))[:,-1]
         return x, ja
     
     def inverse(self, x, c, index_p, index_v, postional_encoding=False):
-        ja = torch.ones((x.shape[0]), device=x.device)
+        # Linear scaling inverse
+        scaler = torch.sigmoid(self.vector.to(x.device)) * 4 -2
+        x = x / scaler
+        ja = torch.abs(torch.cumprod(1/scaler, dim=1))[:,-1]
+        
+        # Inverse through blocks
         for block in reversed(self.blocks):
             x, _ja = block.inverse(x, c, index_p=index_p, index_v=index_v, postional_encoding=postional_encoding)
             ja = ja * _ja
