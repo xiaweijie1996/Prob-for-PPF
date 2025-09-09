@@ -242,7 +242,7 @@ class CSplineBasic(torch.nn.Module):
     def adjusted_sigmoid(self, x):
         # range [-b, b]
         s = torch.sigmoid(x)
-        _b = self.b_interval * (self.k_bins -1) / self.k_bins
+        _b = self.b_interval * (self.k_bins - 2) / self.k_bins
         _output =  s * 2 * _b  - _b
         ja = s * (1- s) * (2 * _b)
         ja = torch.cumprod(ja, dim=1)[:,-1]
@@ -250,7 +250,7 @@ class CSplineBasic(torch.nn.Module):
     
     def inverse_adjusted_sigmoid(self, y):
         # inverse of range [-b, b]
-        _b = self.b_interval * (self.k_bins -1) / self.k_bins
+        _b = self.b_interval * (self.k_bins - 2) / self.k_bins
         _y = (y + _b) / (2 * _b)
         _y = torch.clamp(_y, 1e-6, 1-1e-6)
         _output = torch.log(_y / (1 - _y))
@@ -361,23 +361,6 @@ class CSplineModel(torch.nn.Module):
                 k_bins=k_bins
             ) for _ in range(n_blocks)
         ])
-        
-        self.b_interval = b_interval
-         
-    def adjusted_sigmoid(self, x):
-        # range [-b, b]
-        s = torch.sigmoid(x)
-        _output =  s * 2 * self.b_interval -self.b_interval
-        ja = s * (1- s) * (2 * self.b_interval)
-        ja = torch.cumprod(ja, dim=1)[:,-1]
-        return _output, ja
-    
-    def inverse_adjusted_sigmoid(self, y):
-        # inverse of range [-b, b]
-        _y = (y + self.b_interval) / (2 * self.b_interval)
-        _y = torch.clamp(_y, 1e-6, 1-1e-6)
-        _output = torch.log(_y / (1 - _y))
-        return _output, None
 
     def forward(self, x, c, index_p, index_v):
         # Forward through blocks

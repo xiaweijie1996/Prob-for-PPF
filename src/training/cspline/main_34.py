@@ -35,7 +35,7 @@ def main():
     c_dim = (2 * (num_nodes - 1))  # Condition dimension (P and Q for all nodes except slack)
     n_layers = config['CSpline']['n_layers']
     input_dim = config['CSpline']['input_dim']  # Input dimension (P and Q for one node)
-    hiddemen_dim_condition = config['CSpline']['hiddemen_dim_condition']
+    hiddemen_dim_condition =  config['CSpline']['hiddemen_dim_condition']
     n_layers_condition = config['CSpline']['n_layers_condition']
     b_interval = config['CSpline']['b_interval']
     k_bins = config['CSpline']['k_bins']
@@ -190,7 +190,7 @@ def main():
         })
         
         # Save the model every 100 epochs
-        if (_ + 1) > 10000 and end_loss > loss_vtp.item():
+        if (_ + 1) > 10 and end_loss > loss_vtp.item():
             end_loss = loss_vtp.item()
             torch.save(realnvp_model.state_dict(), os.path.join(save_path, f"CSplinemodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
