@@ -63,7 +63,7 @@ CSpline:
   # Model Features condition
   hiddemen_dim_condition:  256
   n_layers_condition:  3
-  b_interval:  12
+  b_interval: 6
   k_bins:  10
 
   # Training parameters

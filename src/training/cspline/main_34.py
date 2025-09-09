@@ -35,7 +35,7 @@ def main():
     c_dim = (2 * (num_nodes - 1))  # Condition dimension (P and Q for all nodes except slack)
     n_layers = config['CSpline']['n_layers']
     input_dim = config['CSpline']['input_dim']  # Input dimension (P and Q for one node)
-    hiddemen_dim_condition =  config['CSpline']['hiddemen_dim_condition']
+    hiddemen_dim_condition = config['CSpline']['hiddemen_dim_condition']
     n_layers_condition = config['CSpline']['n_layers_condition']
     b_interval = config['CSpline']['b_interval']
     k_bins = config['CSpline']['k_bins']
@@ -176,21 +176,20 @@ def main():
         loss.backward()
         optimizer.step()
         
-        # print(f"Epoch {_+1}, Loss Forward: {loss_forward.item():.6f}, Loss Backward: {loss_backward.item():.6f}, Jacobean: {_ja.mean().item():.6f}, Percentage Error Magnitude: {loss_mangitude.item():.6f}, Percentage Error Angle: {loss_angle.item():.6f}")
-        
+        # print(f"Epoch {_+1}, Loss VTP: {loss_vtp.item():.6f}, Loss PTV: {loss_ptv.item():.6f}, Total Loss: {loss.item():.6f}, Jac: {_ja.mean().item():.6f}, Mag Err: {loss_mangitude.item():.6f}, Ang Err: {loss_angle.item():.6f}")
+              
         # ----------Log to Weights and Biases
         wb.log({
             "loss_ptv": loss_ptv.item(),
             "loss_vtp": loss_vtp.item(),
-            "jacobian": _ja.mean().item(),
             "epoch": _+1,
             "percentage_error_magnitude": loss_mangitude.item(),
             "percentage_error_angle": loss_angle.item(),
-            # "distribution_loss": distribution_loss.item()
+            
         })
         
         # Save the model every 100 epochs
-        if (_ + 1) > 10 and end_loss > loss_vtp.item():
+        if (_ + 1) > 1000 and end_loss > loss_vtp.item():
             end_loss = loss_vtp.item()
             torch.save(realnvp_model.state_dict(), os.path.join(save_path, f"CSplinemodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
