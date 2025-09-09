@@ -73,7 +73,7 @@ class CSplineBasic(torch.nn.Module):
         
         # Define a special token for null condition
         self.null_token = torch.nn.Parameter(torch.randn(1, self.hidden_dim_condition))
-
+    
     def add_pe_and_null_to_c(self, c, index_p, index_v, postional_encoding=False):
         """
         Add positional encoding and null token to the condition vector.
@@ -169,10 +169,7 @@ class CSplineBasic(torch.nn.Module):
         """
         # check x is in which bin from widths
         index = torch.searchsorted(widths.contiguous(), input_x.contiguous(), right=True)
-        # print("index:", index.shape)
-        # print("max and min index:", torch.max(index), torch.min(index))
-        # print("max and min input_x:", torch.max(input_x), torch.min(input_x))
-        # print("max and min widths:", torch.max(widths), torch.min(widths))
+        
         widths_left_value = torch.gather(widths, 1, index-1) # right value shae: (batch_size, dim)
         widths_right_value = torch.gather(widths, 1, index) # right value shae: (batch_size, dim)
         heights_left_value = torch.gather(heights, 1, index-1)
@@ -182,10 +179,6 @@ class CSplineBasic(torch.nn.Module):
         
         # Calculate the slope of the bin
         tau_x = (input_x - widths_left_value) / (widths_right_value - widths_left_value)
-        # print("tau_x:", tau_x)
-        # print("widths_left_value:", widths_left_value)
-        # print("widths_right_value:", widths_right_value)
-        # print("input_x:", input_x)
         s_k = (heights_right_value - heights_left_value)/(widths_right_value - widths_left_value)
         
         # Rational quadratic spline formula
@@ -201,8 +194,8 @@ class CSplineBasic(torch.nn.Module):
         # Jacobian determinant
         jacobian = torch.abs(torch.cumprod(partial_deraivatives, dim=1)[:,-1])
         jacobian = jacobian.reshape(-1, 1)
-        
-        return output_y, jacobian, partial_deraivatives    
+       
+        return output_y, jacobian, partial_deraivatives
     
     def spline_transform_reverse(self, input_y, widths, heights, derivatives):
         """
@@ -217,8 +210,11 @@ class CSplineBasic(torch.nn.Module):
             output_y (torch.Tensor): Transformed output tensor of shape (batch_size, dim).
             logabsdet (torch.Tensor): Log absolute determinant of the Jacobian of shape (batch_size, dim).
         """
+        
         # check x is in which bin from widths
         index = torch.searchsorted(heights.contiguous(), input_y.contiguous(), right=True)
+        
+        # index = torch.searchsorted(input_y.contiguous(), heights.contiguous(), right=True)
         widths_left_value = torch.gather(widths, 1, index-1) # right value shae: (batch_size, dim)
         widths_right_value = torch.gather(widths, 1, index) # right value shae: (batch_size, dim)
         heights_left_value = torch.gather(heights, 1, index-1)
@@ -286,6 +282,11 @@ class CSplineBasic(torch.nn.Module):
             index_v (float): Value for the positional encoding.
         Returns:
         """
+        # # Scale back the input with vector
+        # scaler = self.vectorcontrain(self.vector.to(y.device))
+        # scaler = scaler.expand(y.shape[0], -1)  # Expand to match batch size
+        # y = y / scaler
+        
         c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v)
         # Split the input tensor
         y31, y32 = y[:, :self.split_dim1], y[:, self.split_dim1:]
@@ -358,8 +359,8 @@ if __name__ == "__main__":
     c_dim = 100
     index_v = 1
     index_p = 2
-    k_bins = 10
-    batch_size = 400
+    k_bins = 3
+    batch_size = 2
     model = CSplineModel(
         input_dim=test_dim,
         condition_dim=c_dim,

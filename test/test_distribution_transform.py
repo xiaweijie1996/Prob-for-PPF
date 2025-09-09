@@ -21,10 +21,10 @@ if __name__ == "__main__":
 
     # Test CNiceModelBasic
     test_dim = 2
-    c_dim = 10
+    c_dim = 20
     index_v = 1
     index_p = 1
-    batch = 10000
+    batch = 200000
     n_bins = 50
     
     # ---- model init cnice----
@@ -40,20 +40,20 @@ if __name__ == "__main__":
     model = CSplineModel(
         input_dim=test_dim,
         condition_dim=c_dim,
-        n_blocks=3,
+        n_blocks=2,
         k_bins=10,
-        b_interval= 8
+        b_interval= 10
     )
     
     model.double()
     
     # define a Gaussian Mixture Model
-    _x1, _x2, x3 = np.random.rand(batch, test_dim) * 2, np.random.rand(batch, test_dim) * 3+1, np.random.rand(batch, test_dim) * 1.2+5
+    _x1, _x2, x3 = np.random.rand(batch, test_dim) * 1, np.random.rand(batch, test_dim) * 2, np.random.rand(batch, test_dim) * 3+2
     _x = np.concatenate((_x1, _x2, x3), axis=0)
     gmm = GaussianMixture(n_components=4, covariance_type='full')
     gmm.fit(_x)
     x = torch.tensor(gmm.sample(batch)[0])  # Sample from GMM
-    
+    print(x.max(), x.min())
     # Plot distribution of x
     plt.figure(figsize=(8, 6))
     plt.scatter(x[:, 0].numpy(), x[:, 1].numpy(), alpha=0.5)
@@ -154,12 +154,14 @@ if __name__ == "__main__":
     c = torch.ones(n_bins* n_bins, c_dim)  # Condition vector for inverse
     x_inverse, _ja_inverse = model.forward(_input_y, c, index_p=index_p, index_v=index_v)
     
+    print("x_inverse shape:", x_inverse.shape, "_ja_inverse shape:", _ja_inverse.shape)
     # p_y_compute = x_dix.log_prob(x_inverse).exp() * _ja_inverse
     p_y_compute = gmm.score_samples(x_inverse.detach().numpy())
     p_y_compute = torch.tensor(p_y_compute, dtype=torch.float32)
     p_y_compute = p_y_compute.exp()* _ja_inverse
     print(_ja_inverse.mean().item(), p_y_compute.mean().item())
     _batch_index = 0
+    print("p_y_compute shape:", p_y_compute.shape)
     for i in range(n_bins):
         for j in range(n_bins):
             density_y[j, i] = p_y_compute[_batch_index].item()
