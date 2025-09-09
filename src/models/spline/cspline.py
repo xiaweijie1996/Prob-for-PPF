@@ -238,6 +238,23 @@ class CSplineBasic(torch.nn.Module):
         output_x = widths_left_value + tau_x * (widths_right_value - widths_left_value)
         
         return output_x, None, None
+    
+    def adjusted_sigmoid(self, x):
+        # range [-b, b]
+        s = torch.sigmoid(x)
+        _b = self.b_interval * (self.k_bins -1) / self.k_bins
+        _output =  s * 2 * _b  - _b
+        ja = s * (1- s) * (2 * _b)
+        ja = torch.cumprod(ja, dim=1)[:,-1]
+        return _output, ja
+    
+    def inverse_adjusted_sigmoid(self, y):
+        # inverse of range [-b, b]
+        _b = self.b_interval * (self.k_bins -1) / self.k_bins
+        _y = (y + _b) / (2 * _b)
+        _y = torch.clamp(_y, 1e-6, 1-1e-6)
+        _output = torch.log(_y / (1 - _y))
+        return _output, None
         
     def forward_direction(self, x, c, index_p, index_v):
         """
@@ -270,6 +287,11 @@ class CSplineBasic(torch.nn.Module):
         x3 = torch.cat([x31, x32], dim=1)
         ja = ja1 * ja2
         
+
+        # Scale the output with vector
+        x3, _ja_scale = self.adjusted_sigmoid(x3)
+        ja = ja * _ja_scale.reshape(-1, 1)
+        
         return x3, ja
     
     def inverse_direction(self, y, c, index_p, index_v):
@@ -282,10 +304,8 @@ class CSplineBasic(torch.nn.Module):
             index_v (float): Value for the positional encoding.
         Returns:
         """
-        # # Scale back the input with vector
-        # scaler = self.vectorcontrain(self.vector.to(y.device))
-        # scaler = scaler.expand(y.shape[0], -1)  # Expand to match batch size
-        # y = y / scaler
+        # Scale back the input with vector
+        y, _ = self.inverse_adjusted_sigmoid(y)
         
         c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v)
         # Split the input tensor
@@ -366,16 +386,9 @@ class CSplineModel(torch.nn.Module):
             x, ja_block = block.forward_direction(x, c, index_p=index_p, index_v=index_v)
             ja = ja * ja_block.squeeze(-1)
             
-        # Scale the output with vector
-        x, _ja_scale = self.adjusted_sigmoid(x)
-        ja = ja * _ja_scale.squeeze(-1)
-        
         return x, ja
     
     def inverse(self, y, c, index_p, index_v):
-        # Scale back the input with vector
-        y, _ = self.inverse_adjusted_sigmoid(y)
-        
         # Inverse through blocks
         for block in reversed(self.blocks):
             y, _ = block.inverse_direction(y, c, index_p=index_p, index_v=index_v)

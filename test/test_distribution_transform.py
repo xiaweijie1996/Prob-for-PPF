@@ -25,7 +25,7 @@ if __name__ == "__main__":
     index_v = 1
     index_p = 1
     batch = 200000
-    n_bins = 50
+    n_bins = 20
     
     # ---- model init cnice----
     # model = CNicemModel(input_dim=test_dim, n_layers=1, split_ratio=0.5, n_blocks=2, 
