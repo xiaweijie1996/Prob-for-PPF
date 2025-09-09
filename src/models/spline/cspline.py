@@ -341,15 +341,42 @@ class CSplineModel(torch.nn.Module):
                 k_bins=k_bins
             ) for _ in range(n_blocks)
         ])
+        
+        self.b_interval = b_interval
+         
+    def adjusted_sigmoid(self, x):
+        # range [-b, b]
+        s = torch.sigmoid(x)
+        _output =  s * 2 * self.b_interval -self.b_interval
+        ja = s * (1- s) * (2 * self.b_interval)
+        ja = torch.cumprod(ja, dim=1)[:,-1]
+        return _output, ja
     
+    def inverse_adjusted_sigmoid(self, y):
+        # inverse of range [-b, b]
+        _y = (y + self.b_interval) / (2 * self.b_interval)
+        _y = torch.clamp(_y, 1e-6, 1-1e-6)
+        _output = torch.log(_y / (1 - _y))
+        return _output, None
+
     def forward(self, x, c, index_p, index_v):
+        # Forward through blocks
         ja = torch.ones((x.shape[0]), device=x.device)
         for block in self.blocks:
             x, ja_block = block.forward_direction(x, c, index_p=index_p, index_v=index_v)
             ja = ja * ja_block.squeeze(-1)
+            
+        # Scale the output with vector
+        x, _ja_scale = self.adjusted_sigmoid(x)
+        ja = ja * _ja_scale.squeeze(-1)
+        
         return x, ja
     
     def inverse(self, y, c, index_p, index_v):
+        # Scale back the input with vector
+        y, _ = self.inverse_adjusted_sigmoid(y)
+        
+        # Inverse through blocks
         for block in reversed(self.blocks):
             y, _ = block.inverse_direction(y, c, index_p=index_p, index_v=index_v)
         return y, _
