@@ -142,7 +142,7 @@ def main():
         output_y = torch.cat((target_voltage[:, v_index].unsqueeze(1),
                             target_voltage[:, v_index+num_nodes-1].unsqueeze(1)
                             ), dim=1)
-        print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
+        # print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
         
 
         # ------- training -------
