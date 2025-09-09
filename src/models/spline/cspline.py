@@ -5,6 +5,7 @@ print(_parent_dir)
 sys.path.append(_parent_dir)
 
 import torch
+import wandb
 import src.models.basicnetwork.basicnets as basicnets
  
 # Set all tensor Double globally dtyepe
@@ -132,6 +133,7 @@ class CSplineBasic(torch.nn.Module):
         
         batch_size = params.shape[0]
         k = self.k_bins
+        B = params.shape[0]
         widths = params[:, :k]
         heights = params[:, k:2*k]
         derivatives = params[:, 2*k:]
@@ -147,11 +149,9 @@ class CSplineBasic(torch.nn.Module):
         derivatives = torch.cat([torch.ones(batch_size, 1).to(params.device), derivatives, torch.ones(batch_size, 1).to(params.device)], dim=-1)
         
         # Cumulative sum to get knot positions
-        widths = torch.cumsum(widths, dim=-1) - self.b_interval
-        heights = torch.cumsum(heights, dim=-1) - self.b_interval
-        widths = torch.cat([-self.b_interval * torch.ones(batch_size, 1).to(params.device), widths], dim=-1)
-        heights = torch.cat([-self.b_interval * torch.ones(batch_size, 1).to(params.device), heights], dim=-1)
-        
+        left = -self.b_interval * torch.ones(B, 1, device=params.device, dtype=params.dtype)
+        widths = torch.cat([left, left + torch.cumsum(widths, dim=-1)],  dim=-1)
+        heights = torch.cat([left, left + torch.cumsum(heights, dim=-1)], dim=-1)   # (B, K+1)
         return widths, heights, derivatives
     
     def spline_transform_forward(self, input_x, widths, heights, derivatives):
@@ -167,6 +167,8 @@ class CSplineBasic(torch.nn.Module):
             output_y (torch.Tensor): Transformed output tensor of shape (batch_size, dim).
             logabsdet (torch.Tensor): Log absolute determinant of the Jacobian of shape (batch_size, dim).
         """
+        input_x = input_x.clamp(widths.min()+1e-6, widths.max()-1e-6)
+
         # check x is in which bin from widths
         index = torch.searchsorted(widths.contiguous(), input_x.contiguous(), right=True)
         
@@ -210,6 +212,7 @@ class CSplineBasic(torch.nn.Module):
             output_y (torch.Tensor): Transformed output tensor of shape (batch_size, dim).
             logabsdet (torch.Tensor): Log absolute determinant of the Jacobian of shape (batch_size, dim).
         """
+        input_y = input_y.clamp(heights.min()+1e-6, heights.max()-1e-6)
         
         # check x is in which bin from widths
         index = torch.searchsorted(heights.contiguous(), input_y.contiguous(), right=True)
@@ -238,23 +241,6 @@ class CSplineBasic(torch.nn.Module):
         output_x = widths_left_value + tau_x * (widths_right_value - widths_left_value)
         
         return output_x, None, None
-    
-    def adjusted_sigmoid(self, x):
-        # range [-b, b]
-        s = torch.sigmoid(x)
-        _b = self.b_interval * (self.k_bins - 2) / self.k_bins
-        _output =  s * 2 * _b  - _b
-        ja = s * (1- s) * (2 * _b)
-        ja = torch.cumprod(ja, dim=1)[:,-1]
-        return _output, ja
-    
-    def inverse_adjusted_sigmoid(self, y):
-        # inverse of range [-b, b]
-        _b = self.b_interval * (self.k_bins - 2) / self.k_bins
-        _y = (y + _b) / (2 * _b)
-        _y = torch.clamp(_y, 1e-6, 1-1e-6)
-        _output = torch.log(_y / (1 - _y))
-        return _output, None
         
     def forward_direction(self, x, c, index_p, index_v):
         """
@@ -287,11 +273,6 @@ class CSplineBasic(torch.nn.Module):
         x3 = torch.cat([x31, x32], dim=1)
         ja = ja1 * ja2
         
-
-        # Scale the output with vector
-        x3, _ja_scale = self.adjusted_sigmoid(x3)
-        ja = ja * _ja_scale.reshape(-1, 1)
-        
         return x3, ja
     
     def inverse_direction(self, y, c, index_p, index_v):
@@ -304,9 +285,7 @@ class CSplineBasic(torch.nn.Module):
             index_v (float): Value for the positional encoding.
         Returns:
         """
-        # Scale back the input with vector
-        y, _ = self.inverse_adjusted_sigmoid(y)
-        
+
         c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v)
         # Split the input tensor
         y31, y32 = y[:, :self.split_dim1], y[:, self.split_dim1:]
@@ -388,15 +367,17 @@ if __name__ == "__main__":
         input_dim=test_dim,
         condition_dim=c_dim,
         n_blocks=1,
-        k_bins=k_bins
+        k_bins=k_bins,
+        b_interval= 5
     )
     x = torch.randn(batch_size, test_dim)
     c = torch.randn(batch_size, c_dim)
     index_p = 3
     index_v = 0.5
     y, ja = model.forward(x, c, index_p=index_p, index_v=index_v)
-    print("y:", y.shape)
-    print("ja:", ja.shape)
+    print("x:", x)
+    print("y:", y)
+    print("ja:", ja)
     x_recon, _ = model.inverse(y, c, index_p=index_p, index_v=index_v)
     print("x_recon:", x_recon.shape)
     print("Difference:", (x - x_recon).mean().item())
