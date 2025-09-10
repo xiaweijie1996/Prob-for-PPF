@@ -27,8 +27,8 @@ def main():
         config = yaml.safe_load(f)
     
     num_nodes = config['SystemAndDistribution']['node']  # Total number of nodes including slack
-    dis_path = config['SystemAndDistribution']['dis_path']  # Path to the distribution system file
     scaler_path = config['SystemAndDistribution']['scaler_path']  # Path to save/load the scalers
+    dis_path = config['SystemAndDistribution']['dis_path']  # Path to the distribution system file
     
     c_dim = (2 * (num_nodes - 1))  # Condition dimension (P and Q for all nodes except slack)
     hiddemen_dim = config['Gnn']['hiddemen_dim']
@@ -40,8 +40,8 @@ def main():
     save_path = config['Gnn']['save_path']
     lr = config['Gnn']['lr']
     # -----------------------
-    
     # Initialize the random system
+    
     random_sys = Node34Example()
 
     # Initialize the NICE model
