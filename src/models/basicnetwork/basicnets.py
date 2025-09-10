@@ -22,7 +22,6 @@ class BasicFFN(torch.nn.Module):
             torch.nn.ReLU(),
             *[torch.nn.Sequential(
                 torch.nn.Linear(hidden_dim, hidden_dim),
-                # torch.nn.BatchNorm1d(hidden_dim),
                 torch.nn.ReLU()
             ) for _ in range(n_layers - 1)],
             torch.nn.Linear(hidden_dim, output_dim)

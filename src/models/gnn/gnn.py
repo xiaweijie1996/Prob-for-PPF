@@ -12,7 +12,9 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 import src.models.basicnetwork.basicnets as basicnets
- 
+
+torch.set_default_dtype(torch.float64)
+
 class GnnBasic(nn.Module):
     def __init__(self, 
                  # Graph parameters
@@ -64,6 +66,7 @@ class Gnn(nn.Module):
                  mlp_hidden_dim :int =64,
                  mlp_num_layers :int =2
                  ):
+        
         super(Gnn, self).__init__()
         self.num_nodes = num_nodes
         self.dim_node_feature = dim_node_feature
@@ -114,7 +117,6 @@ class Gnn(nn.Module):
         D_inv_sqrt = torch.diag(deg_inv_sqrt)
         self.norm_adj_matrix = D_inv_sqrt @ self.adj_matrix @ D_inv_sqrt
   
-    
     def plot_graph(self, save_path=None):
         # Figure size
         plt.figure(figsize=(20, 20))
@@ -160,7 +162,7 @@ class Gnn(nn.Module):
 if __name__ == "__main__":
     import pandas as pd
     
-    num_nodes = 34
+    num_nodes = 33
     batch_size = 100
     dim_node_feature = 2
     hidden_dim = 256
@@ -172,7 +174,13 @@ if __name__ == "__main__":
     system_file = 'src/powersystems/files/Lines_34.csv'
     edge_index = pd.read_csv(system_file, header=None)
     edge_index = edge_index.iloc[:, :2].apply(pd.to_numeric, errors='coerce').dropna().values.astype(int)
-    edge_index = torch.tensor(edge_index.T, dtype=torch.long) - 1  # Convert to zero-based index
+    edge_index = torch.tensor(edge_index.T, dtype=torch.long)-1  # Convert to zero-based index
+    print(edge_index)
+    # cancel column with 0
+    edge_index = edge_index[:, edge_index[0, :] != 0]
+    edge_index = edge_index[:, edge_index[1, :] != 0]
+    edge_index -= 1  # Convert to zero-based index
+    print(edge_index)
     
     x = torch.randn((batch_size, num_nodes, dim_node_feature))  # [B, N, Fin]
     
@@ -184,6 +192,7 @@ if __name__ == "__main__":
         hidden_dim=hidden_dim,
         num_block=num_block
     )
+    gnn.plot_graph('src/models/gnn/graph_visualization.png')
     print("Model Parameters: ", sum(p.numel() for p in gnn.parameters() if p.requires_grad))
     out = gnn(x)  # [B, N, Fout]
     print("Input shape:", x.shape)
