@@ -98,11 +98,8 @@ def main():
     # Load already trained model if exists
     model_path = os.path.join(save_path, f"MixedSplineNVPmodel_{num_nodes}.pth")
     if os.path.exists(model_path):
-        try:
-            mix_model.load_state_dict(torch.load(model_path))
-            print(f"Loaded model from {model_path}")
-        except Exception as e:
-            print(f"Error loading model: {e}")
+        mix_model.load_state_dict(torch.load(model_path))
+        print(f"Loaded model from {model_path}")
     
     end_loss = 1e6
     for _ in range(epochs):
