@@ -74,6 +74,14 @@ class CSplineBasic(torch.nn.Module):
         
         # Define a special token for null condition
         self.null_token = torch.nn.Parameter(torch.randn(1, self.hidden_dim_condition))
+        self.vector = torch.nn.Parameter(torch.randn(1, self.input_dim))
+        self.contrain = self.adjusted_scaler
+    
+    def adjusted_scaler(self, x):
+        _output =  torch.tanh(x) * 2
+        # if _output closer to 0, make it 1e-6
+        _output = torch.where(torch.abs(_output) < 1e-10, torch.tensor(1e-10, device=x.device), _output)
+        return _output
     
     def add_pe_and_null_to_c(self, c, index_p, index_v, postional_encoding=False):
         """
@@ -95,7 +103,7 @@ class CSplineBasic(torch.nn.Module):
         c_add (torch.Tensor): Condition vector of shape (batch_size, 1).
         """
         #  torh.sin(index_v) and expand to match batch size
-        v_info = torch.sin(torch.tensor(index_v, dtype=torch.float32)).to(c.device)
+        v_info = torch.sin(torch.tensor(index_v)).to(c.device)
         v_info = v_info.unsqueeze(0).expand(c.shape[0], -1)  # shape (batch_size, 1)
         
         c = torch.cat([c, v_info], dim=-1) 
@@ -285,7 +293,7 @@ class CSplineBasic(torch.nn.Module):
             index_v (float): Value for the positional encoding.
         Returns:
         """
-
+        
         c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v)
         # Split the input tensor
         y31, y32 = y[:, :self.split_dim1], y[:, self.split_dim1:]

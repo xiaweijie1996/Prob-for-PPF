@@ -13,6 +13,7 @@ from sklearn.mixture import GaussianMixture
 from src.models.cnice.cnicemodel import CNicemModel
 from src.models.crealnvp.crealnvp import CRealnvpBasic
 from src.models.spline.cspline import CSplineModel
+from src.models.mixedsplinenvp.mixedsplinenvp import CMixedModel
 
 if __name__ == "__main__":
     # Set all tensor Double globally dtyepe
@@ -21,11 +22,11 @@ if __name__ == "__main__":
 
     # Test CNiceModelBasic
     test_dim = 2
-    c_dim = 20
+    c_dim = 5
     index_v = 1
     index_p = 1
-    batch = 200000
-    n_bins = 15
+    batch = 100000
+    n_bins = 30
     
     # ---- model init cnice----
     # model = CNicemModel(input_dim=test_dim, n_layers=1, split_ratio=0.5, n_blocks=2, 
@@ -37,14 +38,23 @@ if __name__ == "__main__":
     #                         hidden_dim=64, condition_dim=c_dim, 
     #                         hidden_dim_condition=32, output_dim_condition=1, n_layers_condition=2)
     # ---- model init cspline----
-    model = CSplineModel(
+    # model = CSplineModel(
+    #     input_dim=test_dim,
+    #     condition_dim=c_dim,
+    #     n_blocks=2,
+    #     k_bins=10,
+    #     b_interval= 10
+    # )
+    
+    # ---- model init mixed spline and realnvp----
+    model = CMixedModel(
         input_dim=test_dim,
         condition_dim=c_dim,
-        n_blocks=2,
+        n_blocks_spline=1,
+        n_blocks_realnvp=1,
         k_bins=10,
-        b_interval= 10
+        b_interval= 15
     )
-    
     model.double()
     
     # define a Gaussian Mixture Model
