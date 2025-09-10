@@ -75,12 +75,17 @@ CSpline:
   forward_loss_ratio:  0.5
 
 Gnn:
-  # Input parameters
-  c_dim:  66
-  hiddemen_dim: 860
+  # Graph parameters
+  dim_node_feature:  2
   
-  # Model features main
-  n_layers:  7
+  # Graph convolution parameters
+  gnn_num_hidden_layers: 4
+  hidden_dim:  258
+  num_block:  4
+
+  # MLP parameters
+  mlp_hidden_dim:  258
+  mlp_num_hidden_layers:  2
 
   # Training parameters
   learning_rate:  0.0001
