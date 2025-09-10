@@ -100,7 +100,7 @@ class CRealnvpBasic(torch.nn.Module):
         c_add (torch.Tensor): Condition vector of shape (batch_size, 1).
         """
         #  torh.sin(index_v) and expand to match batch size
-        v_info = torch.sin(torch.tensor(index_v, dtype=torch.float32)).to(c.device)
+        v_info = torch.sin(torch.tensor(index_v)).to(c.device)
         v_info = v_info.unsqueeze(0).expand(c.shape[0], -1)  # shape (batch_size, 1)
         
         c = torch.cat([c, v_info], dim=-1) 
