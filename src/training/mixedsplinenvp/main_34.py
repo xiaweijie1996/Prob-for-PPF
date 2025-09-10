@@ -185,6 +185,7 @@ def main():
             "epoch": _+1,
             "percentage_error_magnitude": loss_mangitude.item(),
             "percentage_error_angle": loss_angle.item(),
+            "jacobian": _ja.mean().item()
             
         })
         
