@@ -31,8 +31,8 @@ def main():
     dis_path = config['SystemAndDistribution']['dis_path']  # Path to the distribution system file
     
     dim_node_feature = config['Gnn']['dim_node_feature']  # Dimension of node features
-    gnn_num_hidden_layers = 10 # config['Gnn']['gnn_num_hidden_layers']  # Number of hidden layers in GNN
-    hiddemen_dim = 10 #config['Gnn']['hidden_dim']  # Hidden
+    gnn_num_hidden_layers = config['Gnn']['gnn_num_hidden_layers']  # Number of hidden layers in GNN
+    hiddemen_dim = config['Gnn']['hidden_dim']  # Hidden
     num_block = config['Gnn']['num_block']  # Number of GNN blocks
     
     batch_size = config['Gnn']['batch_size']
