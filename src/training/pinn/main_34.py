@@ -61,7 +61,7 @@ def main():
         num_block=num_blocks,
         hidden_channel=hidden_channel,
     ).to(device)
-    
+    # pinn_model = pinn_model.float()
     print(f"Model Parameters: {sum(p.numel() for p in pinn_model.parameters() if p.requires_grad)}")
     
     # Load GMM and Scalers

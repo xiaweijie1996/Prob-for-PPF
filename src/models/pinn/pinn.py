@@ -7,6 +7,11 @@ sys.path.append(_parent_dir)
 import torch
 import torch.nn as nn
 
+
+# Set all torch floats to double precision
+# torch.set_default_dtype(torch.float32)
+
+
 class PinnmodelEncoderBasic(torch.nn.Module):
     def __init__(self, 
                  num_nodes :int =33,
