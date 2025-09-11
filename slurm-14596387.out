@@ -1,0 +1,81 @@
+Host: gcn36.local.snellius.surf.nl
+Wed Sep 10 18:39:19 2025       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 575.57.08              Driver Version: 575.57.08      CUDA Version: 12.9     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-SXM4-40GB          On  |   00000000:31:00.0 Off |                    0 |
+| N/A   30C    P0             49W /  400W |       0MiB /  40960MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+torch 2.8.0+cu128 cuda? True
+/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/networkx/utils/backends.py:135: RuntimeWarning: networkx backend defined more than once: nx-loopback
+  backends.update(_get_backends("networkx.backends"))
+/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/tensorpowerflow/utils.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+/gpfs/home4/wxia/Prob-for-PPF
+/gpfs/home4/wxia/Prob-for-PPF
+Default case loaded.
+Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    /gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/sklearn/base.py:380: InconsistentVersionWarning: Trying to unpickle estimator GaussianMixture from version 1.7.1 when using version 1.6.1. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+wandb: Currently logged in as: xiaweijie1996 (weijie_xia) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.21.1
+wandb: Run data is saved locally in /gpfs/home4/wxia/Prob-for-PPF/wandb/run-20250910_183939-de4os4h1
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run dandy-donkey-26
+wandb: ⭐️ View project at https://wandb.ai/weijie_xia/Gnn-node-34
+wandb: 🚀 View run at https://wandb.ai/weijie_xia/Gnn-node-34/runs/de4os4h1
+Model Parameters: 3350712
+Loaded scalers from: src/powersystems/psdistribution/34node/scalers.pkl
+Sampled 100 data from GMM, mean: 41.81085584313091, std: 33.58434658993367, shape: (100, 66)
+Loaded GMM from: src/powersystems/psdistribution/34node/gmm_power.pkl
+Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Traceback (most recent call last):
+  File "/gpfs/home4/wxia/Prob-for-PPF/src/training/gnn/main_34.py", line 196, in <module>
+    main()
+  File "/gpfs/home4/wxia/Prob-for-PPF/src/training/gnn/main_34.py", line 151, in main
+    output_power = gnn_model(target_voltage) # [B, N-1, 2]
+  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/gpfs/home4/wxia/Prob-for-PPF/src/models/gnn/gnn.py", line 154, in forward
+    x = x + gnn(x) # [B, hidden, N]
+  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/gpfs/home4/wxia/Prob-for-PPF/src/models/gnn/gnn.py", line 43, in forward
+    x = self.norm_adj_matrix @ x # [B, N, Fin] @ [N, N] -> [B, N, Fin]
+RuntimeError: Expected all tensors to be on the same device, but got mat2 is on cuda:0, different from other tensors on cpu (when checking argument in method wrapper_CUDA_bmm)
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mdandy-donkey-26[0m at: [34mhttps://wandb.ai/weijie_xia/Gnn-node-34/runs/de4os4h1[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20250910_183939-de4os4h1/logs[0m
+srun: error: gcn36: task 0: Exited with exit code 1
+srun: Terminating StepId=14596387.0
+
+JOB STATISTICS
+==============
+Job ID: 14596387
+Cluster: snellius
+User/Group: wxia/wxia
+State: RUNNING
+Nodes: 1
+Cores per node: 18
+CPU Utilized: 00:00:00
+CPU Efficiency: 0.00% of 00:09:54 core-walltime
+Job Wall-clock time: 00:00:33
+Memory Utilized: 0.00 MB
+Memory Efficiency: 0.00% of 40.00 GB (40.00 GB/node)
+WARNING: Efficiency statistics can only be obtained after the job has ended as seff tool is based on the accounting database data.
