@@ -29,27 +29,24 @@ class GnnBasic(nn.Module):
         self.num_nodes = num_nodes # Total number of nodes
         self.norm_adj_matrix = norm_adj_matrix  # [N, N]
         
-        self.conv_layer = nn.ModuleList()
-        for _ in range(num_hidden_layers):
-            self.conv_layer.append(nn.Conv1d(in_channels=hidden_dim, out_channels=hidden_dim, kernel_size=1))
-            self.conv_layer.append(nn.BatchNorm1d(hidden_dim))
-            self.conv_layer.append(nn.LeakyReLU(0.1))
-        self.conv_layer = nn.Sequential(*self.conv_layer)
+        self.conv_layer = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim),  
+            nn.LeakyReLU(),
+            *[layer for _ in range(num_hidden_layers - 1) for layer in (
+                nn.Linear(hidden_dim, hidden_dim),
+                nn.LeakyReLU()
+            )],
+        )
         
     def forward(self, x):
         """
         x: [B, N, Fin] - Node features for each node in the graph
         """
         # Graph convolution operation
-        x = self.norm_adj_matrix @ x # [B, N, Fin] @ [N, N] -> [B, N, Fin]
+        x = self.norm_adj_matrix @ x # [N, N] @ [B, N, Fin] -> [B, N, Fin]
+        x = self.conv_layer(x) # [B, N, hidden] 
         
-        # Permute to [B, Fin, N], Fin as channels
-        x = x.permute(0, 2, 1) # [B, Fin, N]
-        
-        # Apply convolutional layers
-        x = self.conv_layer(x) # [B, Fout, N]
-        
-        return x.permute(0, 2, 1) # [B, N, Fout]
+        return x
 
 class Gnn(nn.Module):
     def __init__(self, 
