@@ -27,7 +27,11 @@ torch 2.8.0+cu128 cuda? True
 /gpfs/home4/wxia/Prob-for-PPF
 /gpfs/home4/wxia/Prob-for-PPF
 Default case loaded.
-Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    /gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/sklearn/base.py:380: InconsistentVersionWarning: Trying to unpickle estimator GaussianMixture from version 1.7.1 when using version 1.6.1. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+
+Chunk:   0%|          | 0/1 [00:00<?, ?it/s]
+Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                    
+/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/sklearn/base.py:380: InconsistentVersionWarning: Trying to unpickle estimator GaussianMixture from version 1.7.1 when using version 1.6.1. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
 https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
   warnings.warn(
 wandb: Currently logged in as: xiaweijie1996 (weijie_xia) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
@@ -42,7 +46,11 @@ Model Parameters: 2901686
 Loaded scalers from: src/powersystems/psdistribution/34node/scalers.pkl
 Sampled 100 data from GMM, mean: 41.9365732622234, std: 33.37408406324936, shape: (100, 66)
 Loaded GMM from: src/powersystems/psdistribution/34node/gmm_power.pkl
-Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Traceback (most recent call last):
+
+Chunk:   0%|          | 0/1 [00:00<?, ?it/s]
+Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]
+                                                    
+Traceback (most recent call last):
   File "/gpfs/home4/wxia/Prob-for-PPF/src/training/pinn/main_34.py", line 186, in <module>
     main()
   File "/gpfs/home4/wxia/Prob-for-PPF/src/training/pinn/main_34.py", line 129, in main
