@@ -32,6 +32,7 @@ class GnnBasic(nn.Module):
         self.conv_layer = nn.ModuleList()
         for _ in range(num_hidden_layers):
             self.conv_layer.append(nn.Conv1d(in_channels=hidden_dim, out_channels=hidden_dim, kernel_size=1))
+            self.conv_layer.append(nn.BatchNorm1d(hidden_dim))
             self.conv_layer.append(nn.LeakyReLU(0.1))
         self.conv_layer = nn.Sequential(*self.conv_layer)
         
@@ -63,8 +64,8 @@ class Gnn(nn.Module):
                  num_block :int =2,
                  
                  # MLP parameters
-                 mlp_hidden_dim :int =64,
-                 mlp_num_layers :int =2
+                #  mlp_hidden_dim :int =64,
+                #  mlp_num_layers :int =2
                  ):
         
         super(Gnn, self).__init__()
@@ -87,12 +88,7 @@ class Gnn(nn.Module):
         )
         
         # Define the densie layer to map to output features if needed
-        self.linear_out = basicnets.BasicFFN(
-            input_dim=hidden_dim * num_nodes,
-            hidden_dim=mlp_hidden_dim,
-            output_dim=dim_node_feature * num_nodes,
-            n_layers=mlp_num_layers
-        )
+        self.linear_out = nn.Linear(hidden_dim, dim_node_feature)
 
     def generate_matrix(self):
         """
@@ -154,9 +150,7 @@ class Gnn(nn.Module):
             x = x + gnn(x) # [B, hidden, N]
         
         # Linear layer to map to output features if needed
-        x = x.reshape(x.size(0), -1) # [B, N*hidden]
-        x = self.linear_out(x) # [B, N*Fin]
-        x = x.reshape(x.size(0), self.num_nodes, self.dim_node_feature)
+        x = self.linear_out(x) # [B, N, Fout*N]
         return x
         
 if __name__ == "__main__":
