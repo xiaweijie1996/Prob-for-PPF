@@ -34,8 +34,6 @@ def main():
     gnn_num_hidden_layers = config['Gnn']['gnn_num_hidden_layers']  # Number of hidden layers in GNN
     hiddemen_dim = config['Gnn']['hidden_dim']  # Hidden
     num_block = config['Gnn']['num_block']  # Number of GNN blocks
-    # mlp_hidden_dim = config['Gnn']['mlp_hidden_dim']  # Hidden dimension in MLP
-    # mlp_num_hidden_layers = config['Gnn']['mlp_num_hidden_layers']  # Number of hidden layers in MLP
     
     batch_size = config['Gnn']['batch_size']
     epochs = config['Gnn']['epochs']
@@ -69,10 +67,6 @@ def main():
         gnn_num_hidden_layers=gnn_num_hidden_layers,
         hidden_dim=hiddemen_dim,
         num_block=num_block,
-        
-        # # MLP parameters
-        # mlp_hidden_dim=mlp_hidden_dim,
-        # mlp_num_layers=mlp_num_hidden_layers
     ).to(device)
     
     # Plot the model to check
@@ -160,7 +154,7 @@ def main():
         loss.backward()
         optimizer.step()
         
-        # print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}")
+        print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}")
         
         # ----------Log to Weights and Biases
         wb.log({
@@ -169,7 +163,7 @@ def main():
         })
         
         # Save the model every 100 epochs
-        if (_ + 1) > 10000 and end_loss > loss.item():
+        if (_ + 1) > 100 and end_loss > loss.item():
             end_loss = loss.item()
             torch.save(gnn_model.state_dict(), os.path.join(save_path, f"Gnnmodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
