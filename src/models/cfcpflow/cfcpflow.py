@@ -7,7 +7,7 @@ sys.path.append(_parent_dir)
 import torch
 import src.models.basicnetwork.basicnets as basicnets
 
-class CRealnvpBasic(torch.nn.Module):
+class CFcpflowBasic(torch.nn.Module):
     def __init__(self, 
                  input_dim: int = 2,
                  hidden_dim: int = 64,
@@ -19,7 +19,7 @@ class CRealnvpBasic(torch.nn.Module):
                  n_layers_condition: int = 2,
                  ):
         
-        super(CRealnvpBasic, self).__init__()
+        super(CFcpflowBasic, self).__init__()
         self.input_dim = input_dim
         self.condition_dim = condition_dim
         self.n_layers = n_layers
@@ -196,7 +196,7 @@ class CRealnvpBasic(torch.nn.Module):
         
         return x, det_ja
     
-class CRealnvpModel(torch.nn.Module):
+class SimplifiedFcpflow(torch.nn.Module):
     def __init__(self, 
                  input_dim: int = 2,
                  hidden_dim: int = 64,
@@ -208,10 +208,10 @@ class CRealnvpModel(torch.nn.Module):
                  output_dim_condition: int = 1,
                  n_layers_condition: int = 2
                  ):
-        super(CRealnvpModel, self).__init__()
+        super(SimplifiedFcpflow, self).__init__()
         
         self.blocks = torch.nn.ModuleList([
-            CRealnvpBasic(
+            CFcpflowBasic(
                 input_dim=input_dim,
                 hidden_dim=hidden_dim,
                 condition_dim=condition_dim,
@@ -249,7 +249,7 @@ if __name__ == "__main__":
     index_p = 2
     batch_size = 4000
     
-    model = CRealnvpModel(
+    model = SimplifiedFcpflow(
         input_dim=test_dim,
         condition_dim=c_dim,
         n_blocks=3

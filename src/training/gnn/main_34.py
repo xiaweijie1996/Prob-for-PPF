@@ -98,7 +98,7 @@ def main():
     loss_function = torch.nn.MSELoss()
     
     # Initialize Weights and Biases
-    wb.init(project=f"Gnn-node-{num_nodes}")
+    wb.init(project=f"CovGnn-{num_nodes}")
     
     # Log Model size
     wb.log({"Model Parameters": sum(p.numel() for p in gnn_model.parameters() if p.requires_grad)})
