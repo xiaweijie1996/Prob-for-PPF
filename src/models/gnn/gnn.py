@@ -98,7 +98,7 @@ class Gnn(nn.Module):
         """
         Generate adjacency matrix and degree matrix from edge_index
         """
-        self.adj_matrix = torch.zeros((self.num_nodes, self.num_nodes))
+        self.adj_matrix = torch.zeros((self.num_nodes, self.num_nodes)).to(self.edge_index.device)
 
         for i in range(self.edge_index.size(1)):
             src = self.edge_index[1, i]
@@ -106,10 +106,10 @@ class Gnn(nn.Module):
             self.adj_matrix[tgt, src] += 1
         
         # Add self-loops
-        self.adj_matrix += torch.eye(self.num_nodes)
+        self.adj_matrix += torch.eye(self.num_nodes).to(self.edge_index.device)
         
         # Degree matrix
-        self.degree_matrix = torch.diag(self.adj_matrix.sum(dim=1))
+        self.degree_matrix = torch.diag(self.adj_matrix.sum(dim=1)).to(self.edge_index.device)
         
         # Normalize adjacency matrix (symmetric normalization)
         deg_inv_sqrt = torch.pow(self.degree_matrix.diag(), -0.5)
@@ -121,7 +121,7 @@ class Gnn(nn.Module):
         # Figure size
         plt.figure(figsize=(20, 20))
         # Convert adjacency to directed graph
-        G = nx.from_numpy_array(self.adj_matrix.numpy(), create_using=nx.DiGraph)
+        G = nx.from_numpy_array(self.adj_matrix.cpu().numpy(), create_using=nx.DiGraph)
 
         pos = nx.spring_layout(G, seed=42)
         

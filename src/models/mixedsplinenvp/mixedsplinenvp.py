@@ -6,7 +6,7 @@ sys.path.append(_parent_dir)
 
 import torch
 from src.models.spline.cspline import CSplineBasic
-from src.models.crealnvp.crealnvp import CRealnvpBasic
+from src.models.cfcpflow.cfcpflow import CFcpflowBasic
  
 # Set all tensor Double globally dtyepe
 torch.set_default_dtype(torch.float64)
@@ -52,7 +52,7 @@ class CMixedModel(torch.nn.Module):
         ])
         
         self.blocks_realnvp = torch.nn.ModuleList([
-            CRealnvpBasic(
+            CFcpflowBasic(
                 # Shared parameters with spline
                 input_dim=input_dim,
                 hidden_dim=hidden_dim,

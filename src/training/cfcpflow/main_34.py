@@ -12,7 +12,7 @@ import yaml
 from sklearn.mixture import GaussianMixture
 import matplotlib.pyplot as plt
 
-from src.models.crealnvp.crealnvp import CRealnvpModel
+from src.models.cfcpflow.cfcpflow import SimplifiedFcpflow
 from src.powersystems.randomsys import  magnitude_transform, angle_transform
 from src.powersystems.node34 import Node34Example
 
@@ -51,7 +51,7 @@ def main():
     random_sys = Node34Example()
 
     # Initialize the NICE model
-    realnvp_model = CRealnvpModel(
+    realnvp_model = SimplifiedFcpflow(
         input_dim=input_dim,
         hidden_dim=hiddemen_dim,
         condition_dim=c_dim,
