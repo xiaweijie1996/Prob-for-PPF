@@ -34,8 +34,8 @@ def main():
     gnn_num_hidden_layers = config['Gnn']['gnn_num_hidden_layers']  # Number of hidden layers in GNN
     hiddemen_dim = config['Gnn']['hidden_dim']  # Hidden
     num_block = config['Gnn']['num_block']  # Number of GNN blocks
-    mlp_hidden_dim = config['Gnn']['mlp_hidden_dim']  # Hidden dimension in MLP
-    mlp_num_hidden_layers = config['Gnn']['mlp_num_hidden_layers']  # Number of hidden layers in MLP
+    # mlp_hidden_dim = config['Gnn']['mlp_hidden_dim']  # Hidden dimension in MLP
+    # mlp_num_hidden_layers = config['Gnn']['mlp_num_hidden_layers']  # Number of hidden layers in MLP
     
     batch_size = config['Gnn']['batch_size']
     epochs = config['Gnn']['epochs']
@@ -70,9 +70,9 @@ def main():
         hidden_dim=hiddemen_dim,
         num_block=num_block,
         
-        # MLP parameters
-        mlp_hidden_dim=mlp_hidden_dim,
-        mlp_num_layers=mlp_num_hidden_layers
+        # # MLP parameters
+        # mlp_hidden_dim=mlp_hidden_dim,
+        # mlp_num_layers=mlp_num_hidden_layers
     ).to(device)
     
     # Plot the model to check
@@ -92,7 +92,7 @@ def main():
     print("Loaded GMM from:", dis_path)
     
     # Define the optimizer
-    optimizer = torch.optim.Adam(gnn_model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(gnn_model.parameters(), lr=lr)
     
     # Define the loss function
     loss_function = torch.nn.MSELoss()
@@ -154,7 +154,7 @@ def main():
         loss = loss_function(output_power, input_power)
         
         # Add weight clipping to avoid NaN
-        # torch.nn.utils.clip_grad_norm_(gnn_model.parameters(), max_norm=0.5)
+        torch.nn.utils.clip_grad_norm_(gnn_model.parameters(), max_norm=0.5)
         
         # Backward pass and optimization
         loss.backward()

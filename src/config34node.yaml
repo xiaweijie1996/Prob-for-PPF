@@ -80,12 +80,12 @@ Gnn:
   
   # Graph convolution parameters
   gnn_num_hidden_layers: 4
-  hidden_dim:  258
-  num_block:  4
+  hidden_dim:  368
+  num_block:  6
 
   # MLP parameters
-  mlp_hidden_dim:  258
-  mlp_num_hidden_layers:  2
+  # mlp_hidden_dim:  258
+  # mlp_num_hidden_layers:  2
 
   # Training parameters
   learning_rate:  0.0001
