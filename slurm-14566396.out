@@ -1,88 +1,0 @@
-Host: gcn35.local.snellius.surf.nl
-Tue Sep  9 16:34:41 2025       
-+-----------------------------------------------------------------------------------------+
-| NVIDIA-SMI 575.57.08              Driver Version: 575.57.08      CUDA Version: 12.9     |
-|-----------------------------------------+------------------------+----------------------+
-| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
-|                                         |                        |               MIG M. |
-|=========================================+========================+======================|
-|   0  NVIDIA A100-SXM4-40GB          On  |   00000000:CA:00.0 Off |                    0 |
-| N/A   31C    P0             54W /  400W |       0MiB /  40960MiB |      0%      Default |
-|                                         |                        |             Disabled |
-+-----------------------------------------+------------------------+----------------------+
-                                                                                         
-+-----------------------------------------------------------------------------------------+
-| Processes:                                                                              |
-|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
-|        ID   ID                                                               Usage      |
-|=========================================================================================|
-|  No running processes found                                                             |
-+-----------------------------------------------------------------------------------------+
-torch 2.8.0+cu128 cuda? True
-/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/networkx/utils/backends.py:135: RuntimeWarning: networkx backend defined more than once: nx-loopback
-  backends.update(_get_backends("networkx.backends"))
-/gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/tensorpowerflow/utils.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
-  import pkg_resources
-/gpfs/home4/wxia/Prob-for-PPF
-/gpfs/home4/wxia/Prob-for-PPF
-Default case loaded.
-Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    /gpfs/home4/wxia/Prob-for-PPF/.venv/lib64/python3.9/site-packages/sklearn/base.py:380: InconsistentVersionWarning: Trying to unpickle estimator GaussianMixture from version 1.7.1 when using version 1.6.1. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
-https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
-  warnings.warn(
-wandb: Currently logged in as: xiaweijie1996 (weijie_xia) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
-wandb: Tracking run with wandb version 0.21.1
-wandb: Run data is saved locally in /gpfs/home4/wxia/Prob-for-PPF/wandb/run-20250909_163500-d5mmdcij
-wandb: Run `wandb offline` to turn off syncing.
-wandb: Syncing run woven-flower-16
-wandb: ⭐️ View project at https://wandb.ai/weijie_xia/CSpline-node-34
-wandb: 🚀 View run at https://wandb.ai/weijie_xia/CSpline-node-34/runs/d5mmdcij
-Model Parameters: 3545895
-Loaded scalers from: src/powersystems/psdistribution/34node/scalers.pkl
-Sampled 100 data from GMM, mean: 41.81336747276641, std: 34.18517227709558, shape: (100, 66)
-Loaded GMM from: src/powersystems/psdistribution/34node/gmm_power.pkl
-Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]             saved at epoch 11 with loss 91.57217227266804
-                                       Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    Chunk:   0%|          | 0/1 [00:00<?, ?it/s]Chunk: 1 of 1:   0%|          | 0/1 [00:00<?, ?it/s]                                                    /pytorch/aten/src/ATen/native/cuda/ScatterGatherKernel.cu:163: operator(): block: [0,0,0], thread: [97,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "scatter gather kernel index out of bounds"` failed.
-/pytorch/aten/src/ATen/native/cuda/ScatterGatherKernel.cu:163: operator(): block: [0,0,0], thread: [98,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "scatter gather kernel index out of bounds"` failed.
-/pytorch/aten/src/ATen/native/cuda/ScatterGatherKernel.cu:163: operator(): block: [0,0,0], thread: [55,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "scatter gather kernel index out of bounds"` failed.
-/pytorch/aten/src/ATen/native/cuda/ScatterGatherKernel.cu:163: operator(): block: [0,0,0], thread: [77,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "scatter gather kernel index out of bounds"` failed.
-/pytorch/aten/src/ATen/native/cuda/ScatterGatherKernel.cu:163: operator(): block: [0,0,0], thread: [87,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "scatter gather kernel index out of bounds"` failed.
-/pytorch/aten/src/ATen/native/cuda/ScatterGatherKernel.cu:163: operator(): block: [0,0,0], thread: [92,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "scatter gather kernel index out of bounds"` failed.
-/pytorch/aten/src/ATen/native/cuda/ScatterGatherKernel.cu:163: operator(): block: [0,0,0], thread: [4,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "scatter gather kernel index out of bounds"` failed.
-/pytorch/aten/src/ATen/native/cuda/ScatterGatherKernel.cu:163: operator(): block: [0,0,0], thread: [5,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "scatter gather kernel index out of bounds"` failed.
-/pytorch/aten/src/ATen/native/cuda/ScatterGatherKernel.cu:163: operator(): block: [0,0,0], thread: [30,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "scatter gather kernel index out of bounds"` failed.
-Traceback (most recent call last):
-  File "/gpfs/home4/wxia/Prob-for-PPF/src/training/cspline/main_34.py", line 232, in <module>
-    main()
-  File "/gpfs/home4/wxia/Prob-for-PPF/src/training/cspline/main_34.py", line 153, in main
-    output_voltage, _ja1 = realnvp_model.inverse(input_x, input_c, index_p=p_index, index_v=v_index)
-  File "/gpfs/home4/wxia/Prob-for-PPF/src/models/spline/cspline.py", line 377, in inverse
-    y, _ = block.inverse_direction(y, c, index_p=index_p, index_v=index_v)
-  File "/gpfs/home4/wxia/Prob-for-PPF/src/models/spline/cspline.py", line 323, in inverse_direction
-    widths1, heights1, derivatives1 = self.create_spline_params(params1)
-  File "/gpfs/home4/wxia/Prob-for-PPF/src/models/spline/cspline.py", line 147, in create_spline_params
-    derivatives = torch.cat([torch.ones(batch_size, 1).to(params.device), derivatives, torch.ones(batch_size, 1).to(params.device)], dim=-1)
-torch.AcceleratorError: CUDA error: device-side assert triggered
-CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
-For debugging consider passing CUDA_LAUNCH_BLOCKING=1
-Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
-
-[1;34mwandb[0m: 
-[1;34mwandb[0m: 🚀 View run [33mwoven-flower-16[0m at: [34mhttps://wandb.ai/weijie_xia/CSpline-node-34/runs/d5mmdcij[0m
-[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20250909_163500-d5mmdcij/logs[0m
-srun: error: gcn35: task 0: Exited with exit code 1
-srun: Terminating StepId=14566396.0
-
-JOB STATISTICS
-==============
-Job ID: 14566396
-Cluster: snellius
-User/Group: wxia/wxia
-State: FAILED (exit code 1)
-Nodes: 1
-Cores per node: 18
-CPU Utilized: 00:00:04
-CPU Efficiency: 0.65% of 00:10:12 core-walltime
-Job Wall-clock time: 00:00:34
-Memory Utilized: 3.64 MB
-Memory Efficiency: 0.01% of 40.00 GB (40.00 GB/node)
