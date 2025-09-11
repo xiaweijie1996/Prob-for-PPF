@@ -67,6 +67,6 @@ if __name__ == "__main__":
     result = system.run(reactive_power=reactive_power,
                         active_power=active_power)
     print("Voltage magnitudes at each node:", len(result))
-    print("Voltage magnitudes:", result["v"].mean())
+    print("Voltage:", result["v"].real.shape, result["v"].imag.shape)
     print("Convergence status:", result.keys())
     
