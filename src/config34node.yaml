@@ -146,3 +146,19 @@ Pinn:
   lr: 0.001
   epochs: 1000000
   save_path:  'src/training/pinn/savedmodel'
+
+PFnet:
+  # Model parameters
+  nfeature_dim: 33
+  hidden_dim: 186
+  out_dim: 33
+  n_blocks: 6
+  K_convs: 3
+  K: 3
+
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/training/powerflownet/savedmodel'
