@@ -114,7 +114,7 @@ if __name__ == "__main__":
     # Example usage of the power flow analysis
     print("Running power flow analysis with modified loads...")
     result = case39.run_pf()
-    print("Power flow results:", result
+    print("Power flow results:", result)
     
     # Plot
     pp.plotting.to_html(case39.net, filename="src/powersystems/ieee39_network.html")
