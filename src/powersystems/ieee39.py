@@ -1,6 +1,9 @@
 import numpy as np
 import pandapower as pp
+import networkx as nx
+
 import pandapower.networks as pn
+from pandapower.topology import create_nxgraph
 
 class Case39PF:
     def __init__(self):
@@ -26,6 +29,45 @@ class Case39PF:
         print("Default range of q_mvar:", self.net.res_load.q_mvar.min(), self.net.load.q_mvar.max())
         print("Load data:")
         print(self.net.load)
+    
+    
+    def bus_index(self):
+        """
+        Returns the bus indices of the network.
+        
+        """
+        net = self.net
+        slack_buses = net.ext_grid.bus.tolist()                 # slack / reference bus(es)
+        pv_buses    = sorted(set(net.gen.bus.tolist()) - set(slack_buses))
+        pq_buses    = sorted(set(net.bus.index) - set(slack_buses) - set(pv_buses))
+        return slack_buses, pv_buses, pq_buses
+    
+    def get_topology_adj_and_edges(self, respect_switches=True):
+        """
+        Returns:
+        A  : numpy [N,N] binary adjacency (lines+trafos)
+        ei : numpy [2,E] undirected edge list (each undirected edge once) firt column "from", second "to"
+        neighbors: dict {bus: [neighbor buses]}
+        """
+        net = self.net
+        
+        # Build NX graph (simple graph, no multi-edges)
+        G = create_nxgraph(net,
+                        respect_switches=respect_switches,
+                        include_lines=True,
+                        include_trafos=True,
+                        multi=False)
+        nodelist = list(net.bus.index)  # ensure row/col order == bus indices
+        A = nx.to_numpy_array(G, nodelist=nodelist, dtype=int)  # 0/1 adjacency
+        ei = np.array(list(G.edges()), dtype=int).T if G.number_of_edges() else np.zeros((2,0), dtype=int)
+        # The graph is undirected, but pandapower lines/trafo have a direction. 
+        # Append reverse edges to get undirected edge list
+        if ei.shape[1]>0:
+            ei = np.hstack((ei, ei[::-1,:]))  # both directions
+            
+        # Update adjacency to be symmetric
+        A = np.maximum(A, A.T)
+        return A, ei
         
     def set_loads(self, 
                 p_vec: np.ndarray,
@@ -40,25 +82,6 @@ class Case39PF:
     
         self.net.load["p_mw"] = p_vec
         self.net.load["q_mvar"] = q_vec
-        
-    def pf_input(self):
-        """
-        Three types of the bus:
-        - PQ bus: input P, Q; output V, θ
-        - PV bus: input P, V; output Q, θ
-        - Slack bus: input V, θ; output P, Q
-        
-        return the input of the power flow analysis
-        """
-        input_dic = {}
-        input_dic['bus_p'] = self.net.load.p_mw
-        input_dic['bus_q'] = self.net.load.q_mvar
-        input_dic["v_bus"] = self.net.ext_grid.vm_pu
-        
-        # input_dic['pv_buses'] = self.net.sgen.bus.values.tolist()  # PV buses
-        # input_dic['slack_buses'] = self.net.ext_grid.bus.values.tolist()  # Slack bus
-        return input_dic
-        
         
     def run_pf(self, max_iteration="auto"):
         """
@@ -76,12 +99,12 @@ class Case39PF:
 if __name__ == "__main__":
 
     case39 = Case39PF()
-    case39._diagnose
-    print(case39.net.res_bus)
+    # case39._diagnose
+    # print(case39.net.res_bus)
     # change the loads
     length = len(case39.net.load)
-    p_vec = [199 * 1 + np.random.randn() * 1 for i in range(length)]
-    q_vec = [30 * 1 + np.random.randn() * 1 for i in range(length)]
+    p_vec = [199 for i in range(length)]
+    q_vec = [30  for i in range(length)]
     case39.set_loads(p_vec, q_vec)
     
     # Sys input
@@ -91,7 +114,11 @@ if __name__ == "__main__":
     # Example usage of the power flow analysis
     print("Running power flow analysis with modified loads...")
     result = case39.run_pf()
-    print("Power flow results:", result)
+    print("Power flow results:", result
     
     # Plot
-    pp.plotting.plotly.simple_plotly(case39.net, filename="src/powersystems/ieee39_network.html")
+    pp.plotting.to_html(case39.net, filename="src/powersystems/ieee39_network.html")
+    
+    A, ei = case39.get_topology_adj_and_edges()
+    print("Adjacency matrix:\n", A)
+    print("Edge list:\n", ei)
