@@ -10,10 +10,10 @@ import torch_geometric
 
 class MPlayer(MessagePassing):
     def __init__(self, nfeature_dim, hidden_dim, output_dim):
-        super().__init__(aggr='add')
+        super().__init__()
         self.edge_aggr = nn.Sequential(
             nn.Linear(nfeature_dim * 2, hidden_dim),
-            nn.ReLU(),
+            nn.LeakyReLU(0.2),
             nn.Linear(hidden_dim, output_dim)
         )
         
@@ -133,4 +133,4 @@ if __name__ == "__main__":
     )
     out = model(x, edge_index)
     print('parameter count:', sum(p.numel() for p in model.parameters()))
-    print(out)
+    print(out.shape)
