@@ -98,11 +98,11 @@ def main():
     # Define the loss function
     loss_function = torch.nn.MSELoss()
     
-    # # Initialize Weights and Biases
-    # wb.init(project=f"PFnet-node-{num_nodes}")
+    # Initialize Weights and Biases
+    wb.init(project=f"PFnet-node-{num_nodes}")
     
-    # # Log Model size
-    # wb.log({"Model Parameters": sum(p.numel() for p in model.parameters() if p.requires_grad)})
+    # Log Model size
+    wb.log({"Model Parameters": sum(p.numel() for p in model.parameters() if p.requires_grad)})
     
     # Load already trained model if exists
     model_path = os.path.join(save_path, f"PFnet_{num_nodes}.pth")
@@ -160,13 +160,13 @@ def main():
         print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}")
         
         # ----------Log to Weights and Biases
-        # wb.log({
-        #     "loss_vtp": loss.item(),
-        #     "epoch": _+1,
-        # })
+        wb.log({
+            "loss_vtp": loss.item(),
+            "epoch": _+1,
+        })
         
         # Save the model every 100 epochs
-        print((_ + 1) > 1 and end_loss > loss.item())
+        # print((_ + 1) > 10000 and end_loss > loss.item())
         if (_ + 1) > 1 and end_loss > loss.item():
             end_loss = loss.item()
             torch.save(model.state_dict(), os.path.join(save_path, f"PFnet_model_{num_nodes}.pth"))
