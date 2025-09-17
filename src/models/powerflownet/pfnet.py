@@ -9,7 +9,7 @@ from torch_geometric.nn import MessagePassing
 
 class MPlayer(MessagePassing):
     def __init__(self, nfeature_dim, hidden_dim, output_dim):
-        super().__init__(aggr='mean')  # "Add" aggregation.
+        super().__init__(aggr='add')  # "Add" aggregation.
         self.edge_aggr = nn.Sequential(
             nn.Linear(nfeature_dim * 2, hidden_dim),
             nn.LeakyReLU(0.2),
@@ -51,16 +51,17 @@ class OneHopThenKConv(nn.Module):
             for _ in range(K_convs - 2):
                 self.convs.append(TAGConv(hidden_dim, hidden_dim, K=K))
             self.convs.append(TAGConv(hidden_dim, hidden_dim, K=K))
-
-        self.act = nn.LeakyReLU(0.2)
-
+    
+        
+        self.act = nn.ReLU()
     def forward(self, x, edge_index):
         # 1) one-hop edge-aware message passing
-        x = x + self.edge_aggr(x, edge_index)
+        x = self.edge_aggr(x, edge_index)
         # 2) K conv layers
         for i, conv in enumerate(self.convs):
             x = conv(x, edge_index)
             x = self.act(x)
+        
         return x
 
 class PFnet(nn.Module):
@@ -92,12 +93,12 @@ class PFnet(nn.Module):
                 )
             )
         self.firstlayer = MPlayer(nfeature_dim, hidden_dim, hidden_dim)
-        self.lastlayer = MPlayer(hidden_dim, hidden_dim, out_dim)
+        self.lastlayer = nn.Linear(hidden_dim, out_dim)
     def forward(self, x, edge_index):
         x = self.firstlayer(x, edge_index)
         for model in self.modelist:
             x = model(x, edge_index)
-        x = self.lastlayer(x, edge_index)
+        x = self.lastlayer(x)
         return x
 
 # --- 4) Run it ---
