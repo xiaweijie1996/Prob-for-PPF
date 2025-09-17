@@ -94,7 +94,7 @@ def main():
         pinn_model.load_state_dict(torch.load(model_path))
         print(f"Loaded model from {model_path}")
     
-    end_loss = 1e6
+    save_loss = 1e6
     for _ in range(epochs):
         pinn_model.train()
         
@@ -159,10 +159,10 @@ def main():
         })
         
         # Save the model every 100 epochs
-        if (_ + 1) > 1000 and end_loss > loss.item():
-            end_loss = loss.item()
+        if (_ + 1) > 1000 and save_loss > loss.item():
+            save_loss = loss.item()
             torch.save(pinn_model.state_dict(), os.path.join(save_path, f"pinnmodel_{num_nodes}.pth"))
-            print(f"saved at epoch {_+1} with loss {end_loss}")
+            print(f"saved at epoch {_+1} with loss {save_loss}")
             
             # Plot the output vs target for power and voltage for the current p_index
             pre_power = output_power.cpu().detach().numpy()
