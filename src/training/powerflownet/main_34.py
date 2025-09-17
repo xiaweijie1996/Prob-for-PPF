@@ -157,7 +157,7 @@ def main():
         loss.backward()
         optimizer.step()
         
-        # print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}, min_value_pre: {output_power.min().item():.6f}, max_value_pre: {output_power.max().item():.6f}")
+        print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}, min_value_pre: {output_power.min().item():.6f}, max_value_pre: {output_power.max().item():.6f}")
         
         # ----------Log to Weights and Biases
         wb.log({
