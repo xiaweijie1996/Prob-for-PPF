@@ -1,0 +1,14 @@
+
+JOB STATISTICS
+==============
+Job ID: 14721257
+Cluster: snellius
+User/Group: wxia/wxia
+State: CANCELLED (exit code 0)
+Nodes: 1
+Cores per node: 18
+CPU Utilized: 00:00:04
+CPU Efficiency: 0.03% of 03:30:36 core-walltime
+Job Wall-clock time: 00:11:42
+Memory Utilized: 1.08 GB
+Memory Efficiency: 2.70% of 40.00 GB (40.00 GB/node)
