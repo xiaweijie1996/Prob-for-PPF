@@ -5,12 +5,11 @@ from torch_geometric.nn import TAGConv  # swap to GCNConv or ChebConv if you pre
 
 # --- 1) Your one-hop message passing block (edge-aware) ---
 from torch_geometric.nn import MessagePassing
-from torch_geometric.utils import degree
-import torch_geometric 
+
 
 class MPlayer(MessagePassing):
     def __init__(self, nfeature_dim, hidden_dim, output_dim):
-        super().__init__()
+        super().__init__(aggr='mean')  # "Add" aggregation.
         self.edge_aggr = nn.Sequential(
             nn.Linear(nfeature_dim * 2, hidden_dim),
             nn.LeakyReLU(0.2),
@@ -18,7 +17,8 @@ class MPlayer(MessagePassing):
         )
         
     def message(self, x_i, x_j):
-        return self.edge_aggr(torch.cat([x_i, x_j], dim=-1)) 
+        xx_ij = torch.cat([x_i, x_j], dim=-1)  # [N, nodes, 2*F]
+        return self.edge_aggr(xx_ij)  # [N, nodes, out_dim]
 
     def forward(self, x, edge_index):
         # (Optional) degree-based normalization if you want GCN-style scaling
@@ -52,7 +52,7 @@ class OneHopThenKConv(nn.Module):
                 self.convs.append(TAGConv(hidden_dim, hidden_dim, K=K))
             self.convs.append(TAGConv(hidden_dim, hidden_dim, K=K))
 
-        self.act = nn.ReLU()
+        self.act = nn.LeakyReLU(0.2)
 
     def forward(self, x, edge_index):
         # 1) one-hop edge-aware message passing
@@ -104,33 +104,23 @@ class PFnet(nn.Module):
 if __name__ == "__main__":
     torch.manual_seed(0)
     
-    # --- 3) Tiny demo graph ---
-    def make_toy_graph():
-        # 5 nodes, undirected edges (send both directions)
-        edge_index = torch.tensor([
-            [0, 1, 1, 2, 2, 3, 3, 4,
-            1, 0, 2, 1, 3, 2, 4, 3],  # reverse edges to make undirected
-            [1, 0, 2, 1, 3, 2, 4, 3,
-            0, 1, 1, 2, 2, 3, 3, 4]
-        ], dtype=torch.long)
-
-        N = 5
-        nfeature_dim = 33
-        x = torch.ones(N, nfeature_dim)       # node features [N, F]
-        
-        return Data(x=x, edge_index=edge_index)
-
-    data = make_toy_graph()
-    x, edge_index = data.x, data.edge_index
+   
+    x = torch.randn(10, 33, 2)  # [B, N, F]
+    edge_index = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 30],
+                               [2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15, 2, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 30, 1]])
+    print(edge_index.shape)
     
     model = PFnet(
-        nfeature_dim=33,
-        hidden_dim=128,
-        out_dim=33,
-        n_blocks=6,
+        nfeature_dim=2,
+        hidden_dim=64,
+        out_dim=2,
+        n_blocks=2,
         K_convs=3,
         K=3
     )
     out = model(x, edge_index)
-    print('parameter count:', sum(p.numel() for p in model.parameters()))
-    print(out.shape)
+    print(out.shape)  # [B, N, out_dim]
+    
+    
+    
+    
