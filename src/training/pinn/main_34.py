@@ -146,7 +146,7 @@ def main():
         output_power_scaled[:, :, 1] = (output_power_scaled[:, :, 1] - scaler['mean_reactive_power']) / scaler['std_reactive_power']
         input_power_scaled[:, :, 0] = (input_power_scaled[:, :, 0] - scaler['mean_active_power']) / scaler['std_active_power']
         input_power_scaled[:, :, 1] = (input_power_scaled[:, :, 1] - scaler['mean_reactive_power']) / scaler['std_reactive_power']
-        end_loss = loss_function(torch.tensor(output_power_scaled), torch.tensor(input_power_scaled)).item()
+        scaled_loss = loss_function(torch.tensor(output_power_scaled), torch.tensor(input_power_scaled)).item()
 
         print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}, Scaled Loss: {end_loss:.6f}")
          
@@ -154,7 +154,7 @@ def main():
         wb.log({
             "loss_vtp_unscaled": loss.item(),
             "epoch": _+1,
-            "loss_vtp": end_loss,
+            "loss_vtp": scaled_loss,
         
         })
         
