@@ -149,9 +149,9 @@ Pinn:
 
 PFnet:
   # Model parameters
-  nfeature_dim: 33
+  # num_nodes : 33
   hidden_dim: 186
-  out_dim: 33
+  nfeature_dim: 2
   n_blocks: 6
   K_convs: 3
   K: 3

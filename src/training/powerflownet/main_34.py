@@ -30,11 +30,8 @@ def main():
     dis_path = config['SystemAndDistribution']['dis_path']  # Path to the distribution system file
     scaler_path = config['SystemAndDistribution']['scaler_path']  # Path to save/load the scalers
     
-    c_dim = (2 * (num_nodes - 1))  # Condition dimension (P and Q for all nodes except slack)
- 
-    nfeature_dim = c_dim 
+    nfeature_dim = config['PFnet']['nfeature_dim']  # Input feature dimension
     hidden_dim = config['PFnet']['hidden_dim']
-    out_dim = c_dim 
     n_blocks = config['PFnet']['n_blocks']
     K_convs = config['PFnet']['K_convs']
     K = config['PFnet']['K']
@@ -49,17 +46,17 @@ def main():
     system_file = 'src/powersystems/files/Lines_34.csv'
     edge_index = pd.read_csv(system_file, header=None)
     edge_index = edge_index.iloc[:, :2].apply(pd.to_numeric, errors='coerce').dropna().values.astype(int)
-    edge_index = torch.tensor(edge_index.T, dtype=torch.long).to(device) - 1  # Convert to zero-based index 
+    edge_index = torch.tensor(edge_index.T, dtype=torch.long).to(device) 
     
-    # cancel column with 0
-    edge_index = edge_index[:, edge_index[0, :] != 0] # [1, 33]
-    edge_index = edge_index[:, edge_index[1, :] != 0] # [1, 33]
-    edge_index -= 1  # Convert to zero-based index [0, 32]
+    # cancel column with 1
+    edge_index = edge_index[:, edge_index[0, :] != 1] # [1, 33]
+    edge_index = edge_index[:, edge_index[1, :] != 1] # [1, 33]
+    edge_index -= 2  # Convert to zero-based index [0, 32]
     
     # Undirected graph: add reverse edges
     edge_index = torch.cat([edge_index, edge_index.flip(0)], dim=1)
     # Add self-loops
-    self_loops = torch.arange(edge_index.size(1) - 1, device=device)
+    self_loops = torch.arange(edge_index.max(), device=device)
     self_loops = self_loops.unsqueeze(0).repeat(2, 1)
     edge_index = torch.cat([edge_index, self_loops], dim=1)
     print(f"Edge index shape: {edge_index}")
@@ -71,7 +68,7 @@ def main():
     model = PFnet(
         nfeature_dim=nfeature_dim,
         hidden_dim=hidden_dim,
-        out_dim=out_dim,
+        out_dim=nfeature_dim,
         n_blocks=n_blocks,
         K_convs=K_convs,
         K=K
@@ -98,11 +95,11 @@ def main():
     # Define the loss function
     loss_function = torch.nn.MSELoss()
     
-    # # Initialize Weights and Biases
-    # wb.init(project=f"PFnet-node-{num_nodes}")
+    # Initialize Weights and Biases
+    wb.init(project=f"PFnet-node-{num_nodes}")
     
-    # # Log Model size
-    # wb.log({"Model Parameters": sum(p.numel() for p in model.parameters() if p.requires_grad)})
+    # Log Model size
+    wb.log({"Model Parameters": sum(p.numel() for p in model.parameters() if p.requires_grad)})
     
     # Load already trained model if exists
     model_path = os.path.join(save_path, f"PFnet_{num_nodes}.pth")
@@ -139,15 +136,18 @@ def main():
         
         input_power = torch.tensor(np.hstack((active_power, reactive_power)), dtype=torch.float32).to(device)
         target_voltage = torch.tensor(voltages, dtype=torch.float32).to(device)
-
+        input_power = input_power.view(-1, num_nodes-1, 2)  # [B, 33, 2]
+        target_voltage = target_voltage.view(-1, num_nodes-1, 2)  # [B, 33, 2]
+        
         # ------- training -------
         # Zero the gradients
         optimizer.zero_grad()
         
         # Voltage to Power
-        output_power = model(target_voltage, edge_index) # [B, N-1, 2]
+        output_power = model(target_voltage, edge_index) # [B, 33, 2]
         
         # Compute the loss
+        # print(f"Output power shape: {output_power.shape}, Input power shape: {input_power.shape}")
         loss = loss_function(output_power, input_power)
         
         # Add weight clipping to avoid NaN
@@ -157,17 +157,18 @@ def main():
         loss.backward()
         optimizer.step()
         
-        print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}")
+        print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}, min_value_pre: {output_power.min().item():.6f}, max_value_pre: {output_power.max().item():.6f}")
         
         # ----------Log to Weights and Biases
-        # wb.log({
-        #     "loss_vtp": loss.item(),
-        #     "epoch": _+1,
-        # })
+        wb.log({
+            "loss_vtp": loss.item(),
+            "epoch": _+1,
+        })
         
         # Save the model every 100 epochs
-        print((_ + 1) > 1 and end_loss > loss.item())
-        if (_ + 1) > 1 and end_loss > loss.item():
+        # print((_ + 1) > 10000 and end_loss > loss.item())
+        if (_ + 1) > 100 == 0 and end_loss > loss.item():
+
             end_loss = loss.item()
             torch.save(model.state_dict(), os.path.join(save_path, f"PFnet_model_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
@@ -175,6 +176,8 @@ def main():
             # Plot the output vs target for power and voltage for the current p_index
             pre_power = output_power.cpu().detach().numpy()
             true_power = input_power.cpu().detach().numpy()
+            pre_power = pre_power.reshape(-1, 2*(num_nodes-1))
+            true_power = true_power.reshape(-1, 2*(num_nodes-1))
             
             # fig.tight_layout()
             # fig.savefig(os.path.join(save_path, f"NN_gen.png"))
