@@ -3,3 +3,7 @@
 
 *__pycache__/
 *wandb/slurm-*.out
+
+# ignore wandb files
+wandb/
+*.wandb
