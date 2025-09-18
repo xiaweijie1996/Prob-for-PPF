@@ -148,7 +148,7 @@ def main():
         input_power_scaled[:, :, 1] = (input_power_scaled[:, :, 1] - scaler['mean_reactive_power']) / scaler['std_reactive_power']
         scaled_loss = loss_function(torch.tensor(output_power_scaled), torch.tensor(input_power_scaled)).item()
 
-        print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}, Scaled Loss: {end_loss:.6f}")
+        print(f"Epoch {_+1}, Loss Forward: {loss.item():.6f}, Scaled Loss: {scaled_loss:.6f}")
          
         # ----------Log to Weights and Biases
         wb.log({
