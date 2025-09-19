@@ -162,3 +162,25 @@ PFnet:
   lr: 0.001
   epochs: 500000
   save_path:  'src/training/powerflownet/savedmodel'
+
+
+CTarflow:
+  # Model parameters
+  num_layers: 5
+
+  input_dim: 2
+  num_blocks_encoder: 1
+  output_dim: 1 # 1/2 input_dim
+  embed_dim: 128
+  num_heads: 2
+  num_nodes: 33
+  num_output_nodes: 1
+  bias: True
+
+  # Training parameters
+  learning_rate:  0.0001
+  forward_loss_ratio: 0.5
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/training/ctarflow/savedmodel'
