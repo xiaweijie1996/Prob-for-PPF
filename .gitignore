@@ -6,4 +6,4 @@
 
 # ignore wandb files
 wandb/
-*.wandb
+*.wandbslurm-*.out
