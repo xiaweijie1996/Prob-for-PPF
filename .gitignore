@@ -8,6 +8,5 @@
 wandb/
 *.wandbslurm-*.out
 slurm-*.out
-slurm-*.out
-slurm-*.out
+
 slurm-*.err
