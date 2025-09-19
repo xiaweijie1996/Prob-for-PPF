@@ -99,6 +99,10 @@ class TransformerEncoder(nn.Module):
                 # Attention features
                 embed_dim: int,
                 num_heads: int,
+                
+                # Default features
+                num_nodes: int = 33,  # Not used in current implementation
+                num_output_nodes: int = 1,  # Not used in current implementation
                 bias: bool = True,
                 ):
         super().__init__()
@@ -125,7 +129,8 @@ class TransformerEncoder(nn.Module):
         ])
         
         # Dense layer to output_dim
-        self.fc_out = nn.Linear(embed_dim, output_dim)
+        self.fc_out_feature = nn.Linear(embed_dim, output_dim)
+        self.fc_out_node = nn.Linear(num_nodes, num_output_nodes)  
         
         # Input_dim has to be 2
         assert input_dim == 2, "Input feature dimension must be 2"
@@ -172,7 +177,6 @@ class TransformerEncoder(nn.Module):
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0).expand(batch_size, -1, -1)  # (batch_size, s_len, embed_dim)
         c_pe = c + pe
-        print(c.mean(), c_pe.mean())
         return c_pe
 
     def forward(self, c, index_p, index_v):
@@ -187,8 +191,8 @@ class TransformerEncoder(nn.Module):
             c = block(c)  # (B, s_len, embed_dim)
         
         # Output layer
-        c_out = self.fc_out(c)  # (B, s_len, output_dim)
-        
+        c_out = self.fc_out_feature(c)  # (B, s_len, output_dim)
+        c_out = self.fc_out_node(c_out.transpose(1, 2)).transpose(1, 2)  # (B, num_nodes, output_dim) -> (B, num_output_nodes, output_dim)       
         return c_out
         
 
@@ -208,7 +212,10 @@ if __name__ == "__main__":
         output_dim=16,
         embed_dim=16,
         num_heads=H,
-        bias=True
+        bias=True,
+        num_nodes=34, # because we add one null token
+        num_output_nodes=1,
+        
     )
     index_p = 1
     index_v = 1
