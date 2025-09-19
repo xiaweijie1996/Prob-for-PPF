@@ -26,47 +26,19 @@ if __name__ == "__main__":
     c_dim = 5
     index_v = 1
     index_p = 1
-    batch = 100000
-    n_bins = 30
+    batch = 50000
+    n_bins = 15
     
-    # ---- model init cnice----
-    # model = CNicemModel(input_dim=test_dim, n_layers=1, split_ratio=0.5, n_blocks=2, 
-    #                         hidden_dim=64, condition_dim=c_dim, 
-    #                         hidden_dim_condition=32, output_dim_condition=1, n_layers_condition=2)
-    
-    # ---- model init crealnvp----
-    # model = CRealnvpBasic(input_dim=test_dim, n_layers=1, split_ratio=0.5,
-    #                         hidden_dim=64, condition_dim=c_dim, 
-    #                         hidden_dim_condition=32, output_dim_condition=1, n_layers_condition=2)
-    # ---- model init cspline----
-    # model = CSplineModel(
-    #     input_dim=test_dim,
-    #     condition_dim=c_dim,
-    #     n_blocks=2,
-    #     k_bins=10,
-    #     b_interval= 10
-    # )
-    
-    # ---- model init mixed spline and realnvp----
-    # model = CMixedModel(
-    #     input_dim=test_dim,
-    #     condition_dim=c_dim,
-    #     n_blocks_spline=1,
-    #     n_blocks_realnvp=1,
-    #     k_bins=10,
-    #     b_interval= 15
-    # )
-    # model.double()
     # ---- model init ctarflow----
     model = CTarflow(
         num_layers=2,
         input_dim=test_dim,
-        num_blocks_econder=2,
+        num_blocks_econder=1,
         output_dim= 1,
-        embed_dim=32,
-        num_heads=4,
+        embed_dim=16,
+        num_heads=2,
         bias=True,
-        num_nodes=33,
+        num_nodes=5,
         num_output_nodes=1
     )
     model.double()
@@ -90,7 +62,10 @@ if __name__ == "__main__":
     
     # input = torch.cat((x, x), dim=1)
     # print("Input shape:", input.shape)
-    
+    x = x.reshape(batch, 1, test_dim)
+    c = c.reshape(batch, c_dim, 1)
+    c = c.repeat(1, 1, test_dim)
+    print("Input x shape:", x.shape, "Condition c shape:", c.shape)
     output, _ja = model.inverse(x, c, index_p=index_p, index_v=index_v)
     print("Output shape:", output.shape)
     # print("Jacobian determinant shape:", _ja.shape)
@@ -100,7 +75,7 @@ if __name__ == "__main__":
     # Plot emperical pdf and cdf of y
     # Convert output to numpy
     y = output.detach().cpu().numpy()
-
+    y = y.reshape(batch, test_dim)
     # Check the min and max if x and y
     max_y0, min_y0 = y[:,0].max().item(), y[:,0].min().item()
     max_y1, min_y1 = y[:,1].max().item(), y[:,1].min().item()
@@ -177,9 +152,13 @@ if __name__ == "__main__":
             _batch_index += 1
     print("Input y shape:", _input_y.shape)
     c = torch.ones(n_bins* n_bins, c_dim)  # Condition vector for inverse
+    c = c.reshape(n_bins* n_bins, c_dim, 1)
+    c = c.repeat(1, 1, test_dim)
+    _input_y = _input_y.reshape(n_bins* n_bins, 1, test_dim)
     x_inverse, _ja_inverse = model.forward(_input_y, c, index_p=index_p, index_v=index_v)
     
     print("x_inverse shape:", x_inverse.shape, "_ja_inverse shape:", _ja_inverse.shape)
+    x_inverse = x_inverse.reshape(-1, 2)
     # p_y_compute = x_dix.log_prob(x_inverse).exp() * _ja_inverse
     p_y_compute = gmm.score_samples(x_inverse.detach().numpy())
     p_y_compute = torch.tensor(p_y_compute, dtype=torch.float32)

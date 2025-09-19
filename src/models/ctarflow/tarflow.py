@@ -115,6 +115,7 @@ class CTarflowBasic(torch.nn.Module):
     
     def inverse(self, x3, c, index_p, index_v):
         # Split the input tensor
+        # print("Inverse input shape:", x3.shape)
         x31, x32 = x3[:, :, :self.split_dim1], x3[:, :, self.split_dim1:]
         
         # Inverse pass through the second coupling layer
@@ -212,3 +213,5 @@ if __name__ == "__main__":
     print(x_recon.shape)
     print(torch.allclose(x, x_recon, atol=1e-5))
     print((x-x_recon).abs().max())
+    
+    # Draw distribution of x and y
