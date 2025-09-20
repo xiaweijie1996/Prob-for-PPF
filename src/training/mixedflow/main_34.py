@@ -12,7 +12,7 @@ import yaml
 from sklearn.mixture import GaussianMixture
 import matplotlib.pyplot as plt
 
-from src.models.mixedsplinenvp.mixedsplinenvp import CMixedModel 
+from src.models.mixedflow.mixedflow import CMixedModel
 from src.powersystems.randomsys import  magnitude_transform, angle_transform
 from src.powersystems.node34 import Node34Example
 
