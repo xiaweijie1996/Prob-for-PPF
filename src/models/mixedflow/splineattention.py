@@ -51,6 +51,18 @@ class CSplineBasic(torch.nn.Module):
             n_layers=self.n_layers
         )
         
+        self.f1 = transformer.TransformerEncoder(
+            input_dim=input_dim,
+            num_blocks=num_blocks_encoder,
+            output_dim=output_dim,
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            bias=bias,
+            num_nodes=num_nodes + 1 + self.split_dim1,  # because we add one null token and concat one x[split_dim1]
+            num_output_nodes=num_output_nodes
+        )
+        
+        
         self.f2 = basicnets.BasicFFN(
             input_dim=self.split_dim2 + self.condition_dim +1,
             hidden_dim=self.hidden_dim,
@@ -83,49 +95,6 @@ class CSplineBasic(torch.nn.Module):
         _output = torch.where(torch.abs(_output) < 1e-10, torch.tensor(1e-10, device=x.device), _output)
         return _output
     
-    def add_pe_and_null_to_c(self, c, index_p, index_v, postional_encoding=False):
-        """
-        Add positional encoding and null token to the condition vector.
-        
-        inpit:
-        c (torch.Tensor): Condition vector of shape (batch_size, condition_dim).
-        
-        after self.fc_add_dim:
-        c (torch.Tensor): Condition vector of shape (batch_size, hidden_dim_condition).
-        
-        after adding null token:
-        c (torch.Tensor): Condition vector of shape (batch_size, hidden_dim_condition).
-        
-        after adding positional encoding:
-        c_pe (torch.Tensor): Positional encoding of shape (batch_size, hidden_dim_condition).
-        
-        after self.fc_min_dim:
-        c_add (torch.Tensor): Condition vector of shape (batch_size, 1).
-        """
-        #  torh.sin(index_v) and expand to match batch size
-        v_info = torch.sin(torch.tensor(index_v)).to(c.device)
-        v_info = v_info.unsqueeze(0).expand(c.shape[0], -1)  # shape (batch_size, 1)
-        
-        c = torch.cat([c, v_info], dim=-1) 
-        c = c.unsqueeze(-1)  # shape (batch_size, condition_dim+1, 1)
-        
-        # Map c to hidden_dim_condition
-        c_add = self.fc_add_dim(c)
-        
-        # Replace the index_i-th element with the null token
-        c_add[:, index_p, :] = self.null_token.to(c.device)
-        num_nodes = int(self.condition_dim / 2) + 1
-        c_add[:, index_p + (num_nodes-1), :] = self.null_token
-        
-        # Add positional encoding (if transformer then use this)
-        if postional_encoding:
-            c_pe = basicnets.abs_pe(c_add)
-            c_add = c_pe.to(c.device) + c_add
-            
-        # Map c_add to a single dimension
-        c_add = self.fc_min_dim(c_add)
-        
-        return c_add.squeeze(-1)  # shape (batch_size, condition_dim +1)
     
     def create_spline_params(self, params):
         """
@@ -260,8 +229,6 @@ class CSplineBasic(torch.nn.Module):
             index_v (float): Value for the positional encoding.
         Returns:
         """
-        c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v)
-        
         # Split the input tensor
         x11, x12 = x[:, :self.split_dim1], x[:, self.split_dim1:]
         
@@ -314,3 +281,9 @@ class CSplineBasic(torch.nn.Module):
         y1 = torch.cat([y11, y12], dim=1)
         
         return y1, None
+
+if __name__ == "__main__":
+    x = torch.randn(2, 1, 2) 
+    c = torch.randn(2, 33, 2)
+    index_p = 1
+    index_v = 2
