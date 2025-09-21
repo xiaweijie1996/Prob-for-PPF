@@ -5,9 +5,8 @@ print(_parent_dir)
 sys.path.append(_parent_dir)
 
 import torch
-from src.models.spline.cspline import CSplineBasic
-from src.models.cfcpflow.cfcpflow import CFcpflowBasic
- 
+from src.models.mixedflow.splineattention import CSplineBasicAttention
+from src.models.mixedflow.fcpattention import CFCPBasicAttention
 # Set all tensor Double globally dtyepe
 torch.set_default_dtype(torch.float64)
 
@@ -16,52 +15,58 @@ class CMixedModel(torch.nn.Module):
     def __init__(self, 
                  # input features
                  input_dim: int = 2,
-                 hidden_dim: int = 64,
-                 condition_dim: int = 12,
                  
-                 # model features 
-                 n_layers: int = 3,
-                 split_ratio: float = 0.5,
-                 n_blocks_spline: int = 3,
-                 n_blocks_realnvp: int = 2,
+                 # model features transformer
+                 num_layers_spline: int = 3,
+                 num_layers_fcp: int = 3,
+                 num_blocks: int = 1,
+                 emb_dim: int = 64,
+                 num_heads: int = 4,
+                 bias: bool = True,
+                 num_nodes: int = 33,
+                 num_output_nodes: int = 1,  
+                 output_dim_fcp: int = 1,
                  
+                 # model features spline
+                 b_interval: float = 5.0, # better to max of the output data maybe
+                 k_bins: int = 10, # number of bins
                  
-                 # model features condition
-                 hidden_dim_condition: int = 32,
-                 n_layers_condition: int = 2,
-                 b_interval: float = 5.0,
-                 k_bins: int = 10
                 ):
         super(CMixedModel, self).__init__()
         
         self.blocks_spline = torch.nn.ModuleList([
-            CSplineBasic(
-                # Shared parameters with RealNVP
-                input_dim=input_dim,
-                hidden_dim=hidden_dim,
-                condition_dim=condition_dim,
-                n_layers=n_layers,
-                split_ratio=split_ratio,
-                hidden_dim_condition=hidden_dim_condition,
-                n_layers_condition=n_layers_condition,
+            CSplineBasicAttention(
+                # input features
+                input_dim = input_dim,
+                # model features transformer
+                num_blocks=num_blocks,
+                emb_dim=emb_dim,
+                num_heads=num_heads,
+                bias=bias,
+                num_nodes=num_nodes,
+                num_output_nodes=num_output_nodes,
                 
-                # Specific parameters for spline
+                # model features spline
                 b_interval=b_interval,
-                k_bins=k_bins
-            ) for _ in range(n_blocks_spline)
+                k_bins=k_bins,
+                 
+                
+            ) for _ in range(num_layers_spline)
         ])
         
         self.blocks_realnvp = torch.nn.ModuleList([
-            CFcpflowBasic(
-                # Shared parameters with spline
+            CFCPBasicAttention(
                 input_dim=input_dim,
-                hidden_dim=hidden_dim,
-                condition_dim=condition_dim,
-                n_layers=n_layers,
-                split_ratio=split_ratio,
-                hidden_dim_condition=hidden_dim_condition,
-                n_layers_condition=n_layers_condition
-            ) for _ in range(n_blocks_realnvp)
+                num_blocks_encoder=num_blocks,
+                output_dim=output_dim_fcp,
+                embed_dim=emb_dim,
+                num_heads=num_heads,
+                bias=bias,
+                num_nodes=num_nodes,
+                num_output_nodes=num_output_nodes,
+                
+                
+            ) for _ in range(num_layers_fcp)
         ])
 
     def forward(self, x, c, index_p, index_v):
@@ -89,17 +94,31 @@ class CMixedModel(torch.nn.Module):
         return y, _
                          
 if __name__ == "__main__":
-    model = CMixedModel()
-    batch_size = 10 
-    dim_in = 2  
-    dim_c = 12
-    x = torch.randn(batch_size, dim_in)
-    c = torch.randn(batch_size, dim_c)
+    batch_size = 100
+    x = torch.randn(batch_size, 1, 2)
+    c = torch.randn(batch_size, 33, 2)
+    
     index_p = 1
     index_v = 1
-    y, ja = model.forward(x, c, index_p, index_v)
-    print(y.shape, ja.shape)
-    x_recon, _ = model.inverse(y, c, index_p, index_v)
-    print(x_recon.shape)
-    print('error', torch.norm(x - x_recon))
-    print(torch.allclose(x, x_recon))
+    model = CMixedModel(
+        input_dim=2,
+        num_layers_spline=2,
+        num_layers_fcp=2,
+        num_blocks=1,
+        emb_dim=64,
+        num_heads=4,
+        bias=True,
+        num_nodes=33,
+        num_output_nodes=1,
+        b_interval=5.0,
+        k_bins=10,
+        output_dim_fcp=1
+    )
+    y, ja = model.forward(x, c, index_p=index_p, index_v=index_v)
+    x_recon, _ = model.inverse(y, c, index_p=index_p, index_v=index_v)
+    print("Input x:", x.shape)
+    print("Transformed y:", y.shape)
+    print("Reconstructed x:", x_recon.shape)
+    print("Jacobian determinant ja:", ja.shape)
+    print("Reconstruction error:", torch.mean((x - x_recon) ** 2).item())
+    print("Allclose?", torch.allclose(x, x_recon, atol=1e-8, rtol=1e-8) )

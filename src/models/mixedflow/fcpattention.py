@@ -99,12 +99,14 @@ class CFCPBasicAttention(torch.nn.Module):
         s1 = torch.exp(self.constrain(self.transformer_s1(x11_c, index_p, index_v)))
         t1 = self.transformer_b1(x11_c, index_p, index_v)
         x22 = x12 * s1 + t1
+        print("s1 shape:", s1.shape, x12.shape, t1.shape)
         
         _det_ja1 = s1.squeeze()  # (B, 1)
         
         # Forward pass through the second coupling layer
         x32 = x22
         x22_repeat = x22.repeat(1,1,2)  # (B, s_len, orial_dim)
+        print("x22_repeat shape:", x22_repeat.shape, x22.shape, c.shape)
         x22_c = torch.cat([c, x22_repeat], dim=1)
         s2 = torch.exp(self.constrain(self.transformer_s2(x22_c, index_p, index_v)))
         t2 = self.transformer_b2(x22_c, index_p, index_v)

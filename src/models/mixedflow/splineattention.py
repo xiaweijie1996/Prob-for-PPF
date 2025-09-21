@@ -11,7 +11,7 @@ import src.models.basicnetwork.transformer as transformer
 # Set all tensor Double globally dtyepe
 torch.set_default_dtype(torch.float64)
 
-class CSplineBasic(torch.nn.Module):
+class CSplineBasicAttention(torch.nn.Module):
     def __init__(self, 
                  # input features
                  input_dim: int = 2,
@@ -32,7 +32,7 @@ class CSplineBasic(torch.nn.Module):
                 
                  ):
         
-        super(CSplineBasic, self).__init__()
+        super(CSplineBasicAttention, self).__init__()
         
         self.input_dim = input_dim
         self.b_interval = b_interval # [-b_interval, b_interval]
