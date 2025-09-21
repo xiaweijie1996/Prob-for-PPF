@@ -29,24 +29,24 @@ def main():
     dis_path = config['SystemAndDistribution']['dis_path']  # Path to the distribution system file
     scaler_path = config['SystemAndDistribution']['scaler_path']  # Path to save/load the scalers
     
-    split_ratio = config['MixedSplineNVP']['split_ratio']
-    n_blocks_spline = config['MixedSplineNVP']['n_blocks_spline']
-    n_blocks_realnvp = config['MixedSplineNVP']['n_blocks_realnvp']
-    hiddemen_dim = config['MixedSplineNVP']['hiddemen_dim']
+    split_ratio = config['MixedSplineFCP']['split_ratio']
+    n_blocks_spline = config['MixedSplineFCP']['n_blocks_spline']
+    n_blocks_realFCP = config['MixedSplineFCP']['n_blocks_realFCP']
+    hiddemen_dim = config['MixedSplineFCP']['hiddemen_dim']
     c_dim = (2 * (num_nodes - 1))  # Condition dimension (P and Q for all nodes except slack)
-    n_layers = config['MixedSplineNVP']['n_layers']
-    input_dim = config['MixedSplineNVP']['input_dim']  # Input dimension (P and Q for one node)
-    hiddemen_dim_condition = config['MixedSplineNVP']['hiddemen_dim_condition']
-    n_layers_condition = config['MixedSplineNVP']['n_layers_condition']
-    b_interval = config['MixedSplineNVP']['b_interval']
-    k_bins = config['MixedSplineNVP']['k_bins']
+    n_layers = config['MixedSplineFCP']['n_layers']
+    input_dim = config['MixedSplineFCP']['input_dim']  # Input dimension (P and Q for one node)
+    hiddemen_dim_condition = config['MixedSplineFCP']['hiddemen_dim_condition']
+    n_layers_condition = config['MixedSplineFCP']['n_layers_condition']
+    b_interval = config['MixedSplineFCP']['b_interval']
+    k_bins = config['MixedSplineFCP']['k_bins']
     
-    batch_size = config['MixedSplineNVP']['batch_size']
-    epochs = config['MixedSplineNVP']['epochs']
+    batch_size = config['MixedSplineFCP']['batch_size']
+    epochs = config['MixedSplineFCP']['epochs']
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    save_path = config['MixedSplineNVP']['save_path']
-    lr = config['MixedSplineNVP']['lr']
-    forward_loss_ratio = config['MixedSplineNVP'].get('forward_loss_ratio', 1.0)  # Default to 1.0 if not specified
+    save_path = config['MixedSplineFCP']['save_path']
+    lr = config['MixedSplineFCP']['lr']
+    forward_loss_ratio = config['MixedSplineFCP'].get('forward_loss_ratio', 1.0)  # Default to 1.0 if not specified
     # -----------------------
     
     # Initialize the random system
@@ -59,7 +59,7 @@ def main():
         condition_dim=c_dim,
         n_layers=n_layers,
         split_ratio=split_ratio,
-        n_blocks_realnvp=n_blocks_realnvp,
+        n_blocks_realFCP=n_blocks_realFCP,
         n_blocks_spline=n_blocks_spline,
         hidden_dim_condition=hiddemen_dim_condition,
         n_layers_condition=n_layers_condition,
@@ -90,13 +90,13 @@ def main():
     loss_function = torch.nn.MSELoss()
     
     # Initialize Weights and Biases
-    wb.init(project=f"MixedSplineNVP-node-{num_nodes}")
+    wb.init(project=f"MixedSplineFCP-node-{num_nodes}")
     
     # Log Model size
     wb.log({"Model Parameters": sum(p.numel() for p in mix_model.parameters() if p.requires_grad)})
     
     # Load already trained model if exists
-    model_path = os.path.join(save_path, f"MixedSplineNVPmodel_{num_nodes}.pth")
+    model_path = os.path.join(save_path, f"MixedSplineFCPmodel_{num_nodes}.pth")
     if os.path.exists(model_path):
         mix_model.load_state_dict(torch.load(model_path))
         print(f"Loaded model from {model_path}")
@@ -192,7 +192,7 @@ def main():
         # Save the model every 100 epochs
         if (_ + 1) > 1000 and end_loss > loss_vtp.item():
             end_loss = loss_vtp.item()
-            torch.save(mix_model.state_dict(), os.path.join(save_path, f"MixedSplineNVPmodel_{num_nodes}.pth"))
+            torch.save(mix_model.state_dict(), os.path.join(save_path, f"MixedSplineFCPmodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
             
             # Plot the output vs target for power and voltage for the current p_index
@@ -219,10 +219,10 @@ def main():
             axes[1].axis('equal')
 
             fig.tight_layout()
-            fig.savefig(os.path.join(save_path, f"MixedSplineNVP_gen.png"))
+            fig.savefig(os.path.join(save_path, f"MixedSplineFCP_gen.png"))
 
             # ✅ log the figure object, not `plt`
-            # wb.log({"MixedSplineNVP_gen": fig})
+            # wb.log({"MixedSplineFCP_gen": fig})
 
             plt.close(fig)   # close after logging
 

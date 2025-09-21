@@ -282,7 +282,7 @@ if __name__ == "__main__":
     index_p = 1
     index_v = 2
     
-    model = CSplineBasic(input_dim=2, 
+    model = CSplineBasicAttention(input_dim=2,
                          num_blocks=2, 
                          emb_dim=16, 
                          num_heads=2, 

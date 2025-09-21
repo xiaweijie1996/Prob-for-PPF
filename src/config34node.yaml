@@ -108,7 +108,7 @@ NN:
   epochs: 500000
   save_path:  'src/training/nn/savedmodel'
 
-MixedSplineNVP:
+MixedSplineFCP:
 # Input parameters
   input_dim:  2
   c_dim:  66
@@ -184,3 +184,30 @@ CTarflow:
   lr: 0.001
   epochs: 500000
   save_path:  'src/training/ctarflow/savedmodel'
+
+MixedAttention:
+    # Input parameters
+    input_dim:  2
+    
+    # Model features main
+    num_layers_spline: 3
+    num_layers_fcp: 2
+    emb_dim: 64
+    num_heads: 4
+    output_dim_fcp: 1 # 1/2 input_dim
+    num_blocks: 1
+    bias: True
+    num_nodes: 33
+    num_output_nodes: 1
+
+    # Model Features condition
+    b_interval: 8
+    k_bins:  10
+
+    # Training parameters
+    learning_rate:  0.0001
+    batch_size:  1000
+    lr: 0.001
+    epochs: 500000
+    save_path:  'src/training/mixedflowattention/savedmodel'
+    forward_loss_ratio:  0.5
