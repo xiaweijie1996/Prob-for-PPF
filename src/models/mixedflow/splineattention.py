@@ -15,79 +15,62 @@ class CSplineBasic(torch.nn.Module):
     def __init__(self, 
                  # input features
                  input_dim: int = 2,
-                 hidden_dim: int = 64,
-                 condition_dim: int = 128,
                  
-                 # model features main
-                 n_layers: int = 3,
-                 split_ratio: float = 0.6,
+        
+                 # model features transformer
+                 num_blocks: int = 4,
+                 emb_dim: int = 64,
+                 num_heads: int = 4,
+                 bias: bool = True,
+                 num_nodes: int = 33,
+                 num_output_nodes: int = 1,  
+                 
+                 # model features spline
                  b_interval: float = 5.0, # better to max of the output data maybe
                  k_bins: int = 10, # number of bins
                  
-                 # model features condition
-                 hidden_dim_condition: int = 32,
-                 n_layers_condition: int = 3,
-        
+                
                  ):
         
         super(CSplineBasic, self).__init__()
         
         self.input_dim = input_dim
-        self.condition_dim = condition_dim
-        self.n_layers = n_layers
-        self.hidden_dim = hidden_dim
-        self.hidden_dim_condition = hidden_dim_condition
-        self.n_layers_condition = n_layers_condition
-        self.split_dim1 = int(input_dim * split_ratio)
-        self.split_dim2 = input_dim - self.split_dim1
         self.b_interval = b_interval # [-b_interval, b_interval]
         self.k_bins = k_bins
+        self.num_blocks = num_blocks
+        self.emb_dim = emb_dim
+        self.num_heads = num_heads
+        self.bias = bias
+        self.num_nodes = num_nodes
+        self.num_output_nodes = num_output_nodes
+        self.split_dim1 = 1
+        
         
         # FNN takes part of the input and output K*3 -1 parameters
-        self.f1 = basicnets.BasicFFN(
-            input_dim=self.split_dim1 + self.condition_dim +1, # positional encoding + null
-            hidden_dim=self.hidden_dim,
-            output_dim=self.k_bins * 3 -1,
-            n_layers=self.n_layers
-        )
-        
         self.f1 = transformer.TransformerEncoder(
-            input_dim=input_dim,
-            num_blocks=num_blocks_encoder,
-            output_dim=output_dim,
-            embed_dim=embed_dim,
-            num_heads=num_heads,
-            bias=bias,
-            num_nodes=num_nodes + 1 + self.split_dim1,  # because we add one null token and concat one x[split_dim1]
-            num_output_nodes=num_output_nodes
-        )
-        
-        
-        self.f2 = basicnets.BasicFFN(
-            input_dim=self.split_dim2 + self.condition_dim +1,
-            hidden_dim=self.hidden_dim,
+            input_dim=self.input_dim,
+            num_blocks=self.num_blocks,
             output_dim=self.k_bins * 3 -1,
-            n_layers=self.n_layers
+            embed_dim=self.emb_dim,
+            num_heads=self.num_heads,
+            bias=self.bias,
+            num_nodes=self.num_nodes + input_dim//2 +1,
+            num_output_nodes=self.num_output_nodes
         )
         
-        self.fc_add_dim = basicnets.BasicFFN(
-            input_dim = 1,
-            hidden_dim= self.hidden_dim_condition,
-            output_dim = self.hidden_dim_condition,
-            n_layers= self.n_layers_condition
-        )
         
-        self.fc_min_dim = basicnets.BasicFFN(
-            input_dim = self.hidden_dim_condition,
-            hidden_dim= self.hidden_dim_condition,
-            output_dim = 1,
-            n_layers= self.n_layers_condition
+        self.f2 = transformer.TransformerEncoder(
+            input_dim=self.input_dim,
+            num_blocks=self.num_blocks,
+            output_dim=self.k_bins * 3 -1,
+            embed_dim=self.emb_dim,
+            num_heads=self.num_heads,
+            bias=self.bias,
+            num_nodes=self.num_nodes + input_dim//2 +1,
+            num_output_nodes=self.num_output_nodes
         )
-        
         # Define a special token for null condition
-        self.null_token = torch.nn.Parameter(torch.randn(1, self.hidden_dim_condition))
-        self.vector = torch.nn.Parameter(torch.randn(1, self.input_dim))
-        self.contrain = self.adjusted_scaler
+        self.null_token = torch.nn.Parameter(torch.randn(1, self.emb_dim))
     
     def adjusted_scaler(self, x):
         _output =  torch.tanh(x) * 2
@@ -230,22 +213,28 @@ class CSplineBasic(torch.nn.Module):
         Returns:
         """
         # Split the input tensor
-        x11, x12 = x[:, :self.split_dim1], x[:, self.split_dim1:]
+        x11, x12 = x[:, :, :self.split_dim1], x[:, :, self.split_dim1:]
         
         # x2
         x21 = x11
-        params1 = self.f1(torch.cat([x11, c_processed], dim=1))
+        x11_repeat = x11.repeat(1,1,2) 
+        params1 = self.f1(torch.cat([c, x11_repeat], dim=1), index_p, index_v) # shape (B, 1, k_bins*3 -1)
+        params1 = params1.squeeze(1)  # shape (B, k_bins*3 -1)
         widths1, heights1, derivatives1 = self.create_spline_params(params1)
-        x22, ja1, _ = self.spline_transform_forward(x12, widths1, heights1, derivatives1)
+        x22, ja1, _ = self.spline_transform_forward(x12.squeeze(1), widths1, heights1, derivatives1)
+        x22 = x22.unsqueeze(1)
         
         # x3
         x32 = x22
-        params2 = self.f2(torch.cat([x22, c_processed], dim=1))
+        x22_repeat = x22.repeat(1,1,2)
+        params2 = self.f2(torch.cat([c, x22_repeat], dim=1), index_p, index_v) # shape (B, 1, k_bins*3 -1)
+        params2 = params2.squeeze(1)  # shape (B, k_bins*
         widths2, heights2, derivatives2 = self.create_spline_params(params2)
-        x31, ja2, _ = self.spline_transform_forward(x21, widths2, heights2, derivatives2)
+        x31, ja2, _ = self.spline_transform_forward(x21.squeeze(1), widths2, heights2, derivatives2)
         
         # Combine the outputs
-        x3 = torch.cat([x31, x32], dim=1)
+        x31 = x31.unsqueeze(1)
+        x3 = torch.cat([x31, x32], dim=-1)
         ja = ja1 * ja2
         
         return x3, ja
@@ -261,29 +250,52 @@ class CSplineBasic(torch.nn.Module):
         Returns:
         """
         
-        c_processed = self.add_pe_and_null_to_c(c, index_p=index_p, index_v=index_v)
         # Split the input tensor
-        y31, y32 = y[:, :self.split_dim1], y[:, self.split_dim1:]
+        y31, y32 = y[:, :, :self.split_dim1], y[:, :, self.split_dim1:]
         
         # x2
         y22 = y32
-        params2 = self.f2(torch.cat([y32, c_processed], dim=1))
+        y22_repeat = y22.repeat(1,1,2)
+        params2 = self.f2(torch.cat([c, y22_repeat], dim=1), index_p, index_v)
+        params2 = params2.squeeze(1)
         widths2, heights2, derivatives2 = self.create_spline_params(params2)
-        y21, _, _ = self.spline_transform_reverse(y31, widths2, heights2, derivatives2)
+        y21, _, _ = self.spline_transform_reverse(y31.squeeze(1), widths2, heights2, derivatives2)
+        y21 = y21.unsqueeze(1)
         
         # x1
         y11 = y21
-        params1 = self.f1(torch.cat([y21, c_processed], dim=1))
+        y11_repeat = y11.repeat(1,1,2)
+        params1 = self.f1(torch.cat([c, y11_repeat], dim=1), index_p, index_v)
+        params1 = params1.squeeze(1)
         widths1, heights1, derivatives1 = self.create_spline_params(params1)
-        y12, _, _ = self.spline_transform_reverse(y22, widths1, heights1, derivatives1)
+        y12, _, _ = self.spline_transform_reverse(y22.squeeze(1), widths1, heights1, derivatives1)
         
         # Combine the outputs
-        y1 = torch.cat([y11, y12], dim=1)
+        y12 = y12.unsqueeze(1)
+        y1 = torch.cat([y11, y12], dim=-1)
         
         return y1, None
 
 if __name__ == "__main__":
-    x = torch.randn(2, 1, 2) 
-    c = torch.randn(2, 33, 2)
+    x = torch.randn(100, 1, 2) 
+    c = torch.randn(100, 33, 2)
     index_p = 1
     index_v = 2
+    
+    model = CSplineBasic(input_dim=2, 
+                         num_blocks=2, 
+                         emb_dim=16, 
+                         num_heads=2, 
+                         bias=True, 
+                         num_nodes=33, 
+                         num_output_nodes=1, 
+                         b_interval=5.0, 
+                         k_bins=10)
+    y, ja = model.forward_direction(x, c, index_p, index_v)
+    print(y.shape, ja.shape)
+    
+    x_recon, _ = model.inverse_direction(y, c, index_p, index_v)
+    print(x_recon.shape)
+    
+    print("Reconstruction error:", torch.mean((x - x_recon)**2).item())
+    print("Allclose?", torch.allclose(x, x_recon, atol=1e-8, rtol=1e-8))
