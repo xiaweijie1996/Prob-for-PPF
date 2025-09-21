@@ -11,7 +11,7 @@ from src.models.mixedflow.fcpattention import CFCPBasicAttention
 torch.set_default_dtype(torch.float64)
 
 
-class CMixedModel(torch.nn.Module):
+class CMixedAttentionModel(torch.nn.Module):
     def __init__(self, 
                  # input features
                  input_dim: int = 2,
@@ -32,7 +32,7 @@ class CMixedModel(torch.nn.Module):
                  k_bins: int = 10, # number of bins
                  
                 ):
-        super(CMixedModel, self).__init__()
+        super(CMixedAttentionModel, self).__init__()
         
         self.blocks_spline = torch.nn.ModuleList([
             CSplineBasicAttention(
@@ -49,7 +49,6 @@ class CMixedModel(torch.nn.Module):
                 # model features spline
                 b_interval=b_interval,
                 k_bins=k_bins,
-                 
                 
             ) for _ in range(num_layers_spline)
         ])
@@ -64,8 +63,6 @@ class CMixedModel(torch.nn.Module):
                 bias=bias,
                 num_nodes=num_nodes,
                 num_output_nodes=num_output_nodes,
-                
-                
             ) for _ in range(num_layers_fcp)
         ])
 
@@ -100,7 +97,7 @@ if __name__ == "__main__":
     
     index_p = 1
     index_v = 1
-    model = CMixedModel(
+    model = CMixedAttentionModel(
         input_dim=2,
         num_layers_spline=2,
         num_layers_fcp=2,

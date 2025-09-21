@@ -10,10 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.mixture import GaussianMixture
 
-from src.models.cnice.cnicemodel import CNicemModel
-# from src.models.crealnvp.crealnvp import CRealnvpBasic
-from src.models.spline.cspline import CSplineModel
-from src.models.mixedsplinenvp.mixedsplinenvp import CMixedModel
+from src.models.mixedflow.mixedflowattention import CMixedAttentionModel
 from src.models.ctarflow.tarflow import CTarflow
 
 if __name__ == "__main__":
@@ -27,20 +24,34 @@ if __name__ == "__main__":
     index_v = 1
     index_p = 1
     batch = 50000
-    n_bins = 15
+    n_bins = 20
     
     # ---- model init ctarflow----
-    model = CTarflow(
-        num_layers=2,
+    # model = CTarflow(
+    #     num_layers=2,
+    #     input_dim=test_dim,
+    #     num_blocks_econder=1,
+    #     output_dim= 1,
+    #     embed_dim=16,
+    #     num_heads=2,
+    #     bias=True,
+    #     num_nodes=5,
+    #     num_output_nodes=1
+    # )
+    # ---- model init cnicemodel----
+    model = CMixedAttentionModel(
         input_dim=test_dim,
-        num_blocks_econder=1,
-        output_dim= 1,
-        embed_dim=16,
+        num_layers_spline=1,
+        num_layers_fcp=1,
+        num_blocks=1,
+        emb_dim=16,
         num_heads=2,
         bias=True,
         num_nodes=5,
-        num_output_nodes=1
+        num_output_nodes=1,
+        output_dim_fcp=1,
     )
+    
     model.double()
     
     # define a Gaussian Mixture Model
