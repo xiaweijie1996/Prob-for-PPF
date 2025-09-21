@@ -48,6 +48,7 @@ def main():
     save_path = config['MixedAttention']['save_path']
     lr = config['MixedAttention']['lr']
     forward_loss_ratio = config['MixedAttention'].get('forward_loss_ratio', 1.0)  # Default to 1.0 if not specified
+    baslr = config['MixedAttention'].get('baslr', 1e-5)
     # -----------------------
     
     # Initialize the random system
@@ -88,15 +89,23 @@ def main():
     
     # Define the optimizer
     optimizer = torch.optim.Adam(mix_model.parameters(), lr=lr)
+    scheduler = torch.optim.lr_scheduler.CyclicLR(
+        optimizer,
+        base_lr=baslr,  # lower bound
+        max_lr=lr,         # upper bound
+        step_size_up=2000,   # number of steps in the rising half cycle
+        mode='triangular',   # 'triangular', 'triangular2', or 'exp_range'
+        cycle_momentum=False # must be False when using Adam
+    )
     
     # Define the loss function
     loss_function = torch.nn.MSELoss()
     
     # Initialize Weights and Biases
-    # wb.init(project=f"MixedAttention-node-{num_nodes}")
+    wb.init(project=f"MixedAttention-node-{num_nodes}")
     
-    # # Log Model size
-    # wb.log({"Model Parameters": sum(p.numel() for p in mix_model.parameters() if p.requires_grad)})
+    # Log Model size
+    wb.log({"Model Parameters": sum(p.numel() for p in mix_model.parameters() if p.requires_grad)})
     
     # Load already trained model if exists
     model_path = os.path.join(save_path, f"MixedAttentionmodel_{num_nodes}.pth")
@@ -145,7 +154,6 @@ def main():
 
         input_x = input_power[:, p_index, : ].unsqueeze(1)  # shape (B, 1, 2)
         
-        
         input_c = input_power
         
         output_y = target_voltage[:, v_index, :].unsqueeze(1)   # shape (B, 1, 2)
@@ -183,18 +191,20 @@ def main():
         loss.backward()
         optimizer.step()
         
+        scheduler.step()
         # print(f"Epoch {_+1}, Loss VTP: {loss_vtp.item():.6f}, Loss PTV: {loss_ptv.item():.6f}, Total Loss: {loss.item():.6f}, Jac: {_ja.mean().item():.6f}, Mag Err: {loss_mangitude.item():.6f}, Ang Err: {loss_angle.item():.6f}")
               
-        # # ----------Log to Weights and Biases
-        # wb.log({
-        #     "loss_ptv": loss_ptv.item(),
-        #     "loss_vtp": loss_vtp.item(),
-        #     "epoch": _+1,
-        #     "percentage_error_magnitude": loss_mangitude.item(),
-        #     "percentage_error_angle": loss_angle.item(),
-        #     "jacobian": _ja.mean().item()
+        # ----------Log to Weights and Biases
+        wb.log({
+            "loss_ptv": loss_ptv.item(),
+            "loss_vtp": loss_vtp.item(),
+            "epoch": _+1,
+            "percentage_error_magnitude": loss_mangitude.item(),
+            "percentage_error_angle": loss_angle.item(),
+            "jacobian": _ja.mean().item(),
+            "lr": scheduler.get_last_lr()[0]
             
-        # })
+        })
         
         # Save the model every 100 epochs
         if (_ + 1) > 1 and end_loss > loss_vtp.item():
