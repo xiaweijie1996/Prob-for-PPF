@@ -12,7 +12,7 @@ import yaml
 from sklearn.mixture import GaussianMixture
 import matplotlib.pyplot as plt
 
-from src.models.cfcpflow.cfcpflow import SimplifiedFcpflow
+from src.models.crealnvp.crealnvp import SimplifiedRealnvpflow
 from src.powersystems.randomsys import  magnitude_transform, angle_transform
 from src.powersystems.node34 import Node34Example
 
@@ -29,29 +29,29 @@ def main():
     dis_path = config['SystemAndDistribution']['dis_path']  # Path to the distribution system file
     scaler_path = config['SystemAndDistribution']['scaler_path']  # Path to save/load the scalers
     
-    split_ratio = config['CFCP']['split_ratio']
-    n_blocks = config['CFCP']['n_blocks']
-    hiddemen_dim = config['CFCP']['hiddemen_dim']
+    split_ratio = config['CRealnvp']['split_ratio']
+    n_blocks = config['CRealnvp']['n_blocks']
+    hiddemen_dim = config['CRealnvp']['hiddemen_dim']
     c_dim = (2 * (num_nodes - 1))  # Condition dimension (P and Q for all nodes except slack)
-    n_layers = config['CFCP']['n_layers']
-    input_dim = config['CFCP']['input_dim']  # Input dimension (P and Q for one node)
-    hiddemen_dim_condition = config['CFCP']['hiddemen_dim_condition']
-    output_dim_condition = config['CFCP']['output_dim_condition']
-    n_layers_condition = config['CFCP']['n_layers_condition']
+    n_layers = config['CRealnvp']['n_layers']
+    input_dim = config['CRealnvp']['input_dim']  # Input dimension (P and Q for one node)
+    hiddemen_dim_condition = config['CRealnvp']['hiddemen_dim_condition']
+    output_dim_condition = config['CRealnvp']['output_dim_condition']
+    n_layers_condition = config['CRealnvp']['n_layers_condition']
     
-    batch_size = config['CFCP']['batch_size']
-    epochs = config['CFCP']['epochs']
+    batch_size = config['CRealnvp']['batch_size']
+    epochs = config['CRealnvp']['epochs']
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    save_path = config['CFCP']['save_path']
-    lr = config['CFCP']['lr']
-    forward_loss_ratio = config['CFCP'].get('forward_loss_ratio', 1.0)  # Default to 1.0 if not specified
+    save_path = config['CRealnvp']['save_path']
+    lr = config['CRealnvp']['lr']
+    forward_loss_ratio = config['CRealnvp'].get('forward_loss_ratio', 1.0)  # Default to 1.0 if not specified
     # -----------------------
     
     # Initialize the random system
     random_sys = Node34Example()
 
     # Initialize the NICE model
-    realnvp_model = SimplifiedFcpflow(
+    model = SimplifiedRealnvpflow(
         input_dim=input_dim,
         hidden_dim=hiddemen_dim,
         condition_dim=c_dim,
@@ -62,8 +62,8 @@ def main():
         output_dim_condition=output_dim_condition,
         n_layers_condition=n_layers_condition
     ).to(device)
-    realnvp_model.double()
-    print(f"Model Parameters: {sum(p.numel() for p in realnvp_model.parameters() if p.requires_grad)}")
+    model.double()
+    print(f"Model Parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
     
     # Load GMM and Scalers
     # gmm = GaussianMixture(n_components=n_components, covariance_type='full', random_state=42)
@@ -79,26 +79,26 @@ def main():
     print("Loaded GMM from:", dis_path)
     
     # Define the optimizer
-    optimizer = torch.optim.AdamW(realnvp_model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     
     # Define the loss function
     loss_function = torch.nn.MSELoss()
     
     # Initialize Weights and Biases
-    wb.init(project=f"CFCP-node-{num_nodes}")
+    wb.init(project=f"Realnvp-node-{num_nodes}")
     
     # Log Model size
-    wb.log({"Model Parameters": sum(p.numel() for p in realnvp_model.parameters() if p.requires_grad)})
+    wb.log({"Model Parameters": sum(p.numel() for p in model.parameters() if p.requires_grad)})
     
     # Load already trained model if exists
-    model_path = os.path.join(save_path, f"CFCPmodel_{num_nodes}.pth")
+    model_path = os.path.join(save_path, f"Realnvp_{num_nodes}.pth")
     if os.path.exists(model_path):
-        realnvp_model.load_state_dict(torch.load(model_path))
+        model.load_state_dict(torch.load(model_path))
         print(f"Loaded model from {model_path}")
     
     end_loss = 1e6
     for _ in range(epochs):
-        realnvp_model.train()
+        model.train()
         
         #-------input and target power flow data preparation-------
         # Generate random active and reactive power inputs
@@ -144,28 +144,23 @@ def main():
         # Zero the gradients
         optimizer.zero_grad()
         
-        # Forward pass through the NICE model
-        output_voltage, _ja = realnvp_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
+        # Power to Voltage
+        output_voltage, _ja1 = model.inverse(input_x, input_c, index_p=p_index, index_v=v_index)
         
-        # Backward pass to get the output power
-        output_power, _j = realnvp_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
-        
-        # Compute the loss
-        loss_backward = loss_function(output_power, input_x)
+        # Voltage to Power
+        output_power, _ja = model.forward(output_y, input_c, index_p=p_index, index_v=v_index)
         
         # Compute the loss
-        loss_forward = loss_function(output_voltage, output_y)
+        loss_vtp = loss_function(output_power, input_x)
         
-        # Compute the std of backward output_power and input_x for normalization
-        # std_input_x = torch.std(input_x, dim=0) # shape (2,)
-        # std_output_power = torch.std(output_power, dim=0) # shape (2,)
-        # distribution_loss = torch.abs(std_output_power - std_input_x).mean()
+        # Compute the loss
+        loss_ptv = loss_function(output_voltage, output_y)
         
         # Loss
-        loss = loss_forward * forward_loss_ratio + loss_backward * (1 - forward_loss_ratio) # + distribution_loss
+        loss = loss_vtp * forward_loss_ratio + loss_ptv * (1 - forward_loss_ratio) # + distribution_loss
     
         # Add weight clipping to avoid NaN
-        torch.nn.utils.clip_grad_norm_(realnvp_model.parameters(), max_norm=0.5)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.5)
         
         # Error
         with torch.no_grad():
@@ -176,23 +171,23 @@ def main():
         loss.backward()
         optimizer.step()
         
-        # print(f"Epoch {_+1}, Loss Forward: {loss_forward.item():.6f}, Loss Backward: {loss_backward.item():.6f}, Jacobean: {_ja.mean().item():.6f}, Percentage Error Magnitude: {loss_mangitude.item():.6f}, Percentage Error Angle: {loss_angle.item():.6f}")
-        
+        print(f"Epoch {_+1}, Loss VTP: {loss_vtp.item():.6f}, Loss PTV: {loss_ptv.item():.6f}, Total Loss: {loss.item():.6f}, Jac: {_ja.mean().item():.6f}, Mag Err: {loss_mangitude.item():.6f}, Ang Err: {loss_angle.item():.6f}")
+              
         # ----------Log to Weights and Biases
         wb.log({
-            "loss_forward": loss_forward.item(),
-            "loss_backward": loss_backward.item(),
-            "jacobian": _ja.mean().item(),
+            "loss_ptv": loss_ptv.item(),
+            "loss_vtp": loss_vtp.item(),
             "epoch": _+1,
             "percentage_error_magnitude": loss_mangitude.item(),
             "percentage_error_angle": loss_angle.item(),
-            # "distribution_loss": distribution_loss.item()
+            "jacobian": _ja.mean().item()
+            
         })
         
         # Save the model every 100 epochs
-        if (_ + 1) > 10000 and end_loss > loss_forward.item():
-            end_loss = loss_forward.item()
-            torch.save(realnvp_model.state_dict(), os.path.join(save_path, f"CFCPmodel_{num_nodes}.pth"))
+        if (_ + 1) > 1000 and end_loss > loss_vtp.item():
+            end_loss = loss_vtp.item()
+            torch.save(model.state_dict(), os.path.join(save_path, f"Realnvp_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
             
             # Plot the output vs target for power and voltage for the current p_index
@@ -219,10 +214,10 @@ def main():
             axes[1].axis('equal')
 
             fig.tight_layout()
-            fig.savefig(os.path.join(save_path, f"CFCP_gen.png"))
+            fig.savefig(os.path.join(save_path, f"Realnvp_gen.png"))
 
             # ✅ log the figure object, not `plt`
-            # wb.log({"CFCP_gen": fig})
+            # wb.log({"MixedSplineFCP_gen": fig})
 
             plt.close(fig)   # close after logging
 
