@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -J CRealnvp
-#SBATCH -p gpu_a100           # use a GPU partition that 'sinfo' shows for your account
+#SBATCH -p gpu         # use a GPU partition that 'sinfo' shows for your account
 #SBATCH -t 99:00:00
 #SBATCH -N 1
 #SBATCH --ntasks=1
