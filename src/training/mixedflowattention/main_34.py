@@ -207,7 +207,7 @@ def main():
         })
         
         # Save the model every 100 epochs
-        if (_ + 1) > 1 and end_loss > loss_vtp.item():
+        if (_ + 1) > 100000 and end_loss > loss_vtp.item():
             end_loss = loss_vtp.item()
             torch.save(mix_model.state_dict(), os.path.join(save_path, f"MixedAttentionmodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
