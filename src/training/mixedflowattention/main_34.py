@@ -88,7 +88,7 @@ def main():
     print("Loaded GMM from:", dis_path)
     
     # Define the optimizer
-    optimizer = torch.optim.Adam(mix_model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(mix_model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CyclicLR(
         optimizer,
         base_lr=baslr,  # lower bound

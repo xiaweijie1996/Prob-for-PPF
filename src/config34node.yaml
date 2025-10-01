@@ -213,9 +213,9 @@ MixedAttention:
     input_dim:  2
     
     # Model features main
-    num_layers_spline: 2
+    num_layers_spline: 3
     num_layers_fcp: 2
-    emb_dim: 112
+    emb_dim: 100
     num_heads: 4
     output_dim_fcp: 1 # 1/2 input_dim
     num_blocks: 2
@@ -231,7 +231,7 @@ MixedAttention:
     learning_rate:  0.0001
     batch_size:  1000
     lr: 0.001
-    baslr: 0.00005
+    baslr: 0.0001
     epochs: 500000
     save_path:  'src/training/mixedflowattention/savedmodel'
     forward_loss_ratio:  0.5
