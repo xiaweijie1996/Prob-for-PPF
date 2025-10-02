@@ -41,7 +41,6 @@ def main():
 
     b_interval = config['MixedAttention']['b_interval']
     k_bins = config['MixedAttention']['k_bins']
-    
     batch_size = config['MixedAttention']['batch_size']
     epochs = config['MixedAttention']['epochs']
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -57,7 +56,6 @@ def main():
     # Initialize the NICE model
     mix_model = CMixedAttentionModel(
         input_dim=input_dim,
-        
         num_layers_spline=num_layers_spline,
         num_layers_fcp=num_layers_fcp,
         num_blocks=num_blocks,
@@ -69,7 +67,6 @@ def main():
         output_dim_fcp=output_dim_fcp,
         b_interval=b_interval,
         k_bins=k_bins,
-       
     ).to(device)
     mix_model.double()
     print(f"Model Parameters: {sum(p.numel() for p in mix_model.parameters() if p.requires_grad)}")
@@ -88,7 +85,7 @@ def main():
     print("Loaded GMM from:", dis_path)
     
     # Define the optimizer
-    optimizer = torch.optim.AdamW(mix_model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(mix_model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CyclicLR(
         optimizer,
         base_lr=baslr,  # lower bound
@@ -179,9 +176,6 @@ def main():
         # Loss
         loss = loss_vtp * forward_loss_ratio + loss_ptv * (1 - forward_loss_ratio) # + distribution_loss
     
-        # Add weight clipping to avoid NaN
-        torch.nn.utils.clip_grad_norm_(mix_model.parameters(), max_norm=0.5)
-        
         # Error
         with torch.no_grad():
             loss_mangitude = loss_function(output_voltage[:, :, 0], output_y[:, :, 0])
@@ -189,8 +183,11 @@ def main():
     
         # Backward pass and optimization
         loss.backward()
-        optimizer.step()
         
+        # Add weight clipping to avoid NaN
+        torch.nn.utils.clip_grad_norm_(mix_model.parameters(), max_norm=0.5)
+        
+        optimizer.step()
         scheduler.step()
         # print(f"Epoch {_+1}, Loss VTP: {loss_vtp.item():.6f}, Loss PTV: {loss_ptv.item():.6f}, Total Loss: {loss.item():.6f}, Jac: {_ja.mean().item():.6f}, Mag Err: {loss_mangitude.item():.6f}, Ang Err: {loss_angle.item():.6f}")
               
@@ -251,3 +248,4 @@ def main():
            
 if __name__ == "__main__":
     main()
+    wb.finish()

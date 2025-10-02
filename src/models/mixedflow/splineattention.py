@@ -277,8 +277,10 @@ class CSplineBasicAttention(torch.nn.Module):
         return y1, None
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
     x = torch.randn(100, 1, 2) 
     c = torch.randn(100, 33, 2)
+    y_target = torch.randn(100, 1, 2)
     index_p = 1
     index_v = 2
     
@@ -299,3 +301,23 @@ if __name__ == "__main__":
     
     print("Reconstruction error:", torch.mean((x - x_recon)**2).item())
     print("Allclose?", torch.allclose(x, x_recon, atol=1e-8, rtol=1e-8))
+    
+    # Create a small training loop
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    for epoch in range(500):
+        optimizer.zero_grad()
+        y, ja = model.forward_direction(x, c, index_p, index_v)
+        loss = (y-y_target).pow(2).mean() 
+        loss.backward()
+        optimizer.step()
+        if epoch % 10 == 0:
+            print(f"Epoch {epoch}, Loss: {loss.item()}")
+        # Plot the y and y_target
+        if epoch % 20 == 0:
+            plt.scatter(y.detach().numpy()[:,0,0], y.detach().numpy()[:,0,1], label='y', alpha=0.5)
+            plt.scatter(y_target.detach().numpy()[:,0,0], y_target.detach().numpy()[:,0,1], label='y_target', alpha=0.5)
+            plt.legend()
+            plt.title(f"Epoch {epoch}")
+            plt.savefig(f"src/models/mixedflow/spline_test.png")
+            plt.close()
+        

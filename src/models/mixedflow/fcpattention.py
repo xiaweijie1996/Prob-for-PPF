@@ -158,8 +158,11 @@ class CFCPBasicAttention(torch.nn.Module):
   
     
 if __name__ == "__main__":
-    x = torch.randn(2, 1, 2) 
-    c = torch.randn(2, 33, 2)
+    import matplotlib.pyplot as plt
+    batch_size = 100
+    x = torch.randn(batch_size, 1, 2) 
+    c = torch.randn(batch_size, 33, 2)
+    y_target = torch.randn(batch_size, 1, 2)
     index_p = 1
     index_v = 2
     
@@ -173,7 +176,26 @@ if __name__ == "__main__":
         num_output_nodes=1,
         bias=True
     )
-    y, ja = model.forward(x, c, index_p, index_v)
-    print("Output shape:", y.shape, ja.shape)
-    x_recon, ja_inv = model.inverse(y, c, index_p, index_v)
-    print("Reconstructed shape:", x_recon.shape, ja_inv.shape)
+    # y, ja = model.forward(x, c, index_p, index_v)
+    # print("Output shape:", y.shape, ja.shape)
+    # x_recon, ja_inv = model.inverse(y, c, index_p, index_v)
+    # print("Reconstructed shape:", x_recon.shape, ja_inv.shape)
+    
+    # Create a small training loop
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    for epoch in range(1000):
+        optimizer.zero_grad()
+        y, ja = model.forward(x, c, index_p, index_v)
+        loss = torch.mean((y - y_target )**2)
+        loss.backward()
+        optimizer.step()
+        if epoch % 10 == 0:
+            print(f"Epoch {epoch}, Loss: {loss.item()}")
+    # Plot the loss curve --- IGNORE ---
+        if epoch % 20 == 0:
+            plt.scatter(y.detach().numpy()[:,0,0], y.detach().numpy()[:,0,1], label='y', alpha=0.5)
+            plt.scatter(y_target.detach().numpy()[:,0,0], y_target.detach().numpy()[:,0,1], label='y_target', alpha=0.5)
+            plt.legend()
+            plt.title(f"Epoch {epoch}")
+            plt.savefig(f"src/models/mixedflow/fcp_test.png")
+            plt.close()

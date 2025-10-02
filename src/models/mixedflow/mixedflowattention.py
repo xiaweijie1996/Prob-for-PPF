@@ -53,7 +53,7 @@ class CMixedAttentionModel(torch.nn.Module):
             ) for _ in range(num_layers_spline)
         ])
         
-        self.blocks_realnvp = torch.nn.ModuleList([
+        self.blocks_fcp = torch.nn.ModuleList([
             CFCPBasicAttention(
                 input_dim=input_dim,
                 num_blocks_encoder=num_blocks,
@@ -74,14 +74,14 @@ class CMixedAttentionModel(torch.nn.Module):
             ja = ja * ja_block.squeeze(-1)
         
         # Forward through blocks of realnvp
-        for block in self.blocks_realnvp:
+        for block in self.blocks_fcp:
             x, ja_block = block.forward(x, c, index_p=index_p, index_v=index_v)
             ja = ja * ja_block.squeeze(-1)
         return x, ja
     
     def inverse(self, y, c, index_p, index_v):
         # Inverse through blocks of realnvp
-        for block in reversed(self.blocks_realnvp):
+        for block in reversed(self.blocks_fcp):
             y, _ = block.inverse(y, c, index_p=index_p, index_v=index_v)
             
         # Inverse through blocks of spline
@@ -91,10 +91,11 @@ class CMixedAttentionModel(torch.nn.Module):
         return y, _
                          
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
     batch_size = 100
     x = torch.randn(batch_size, 1, 2)
     c = torch.randn(batch_size, 33, 2)
-    
+    y_target = torch.randn(batch_size, 1, 2)
     index_p = 1
     index_v = 1
     model = CMixedAttentionModel(
@@ -119,3 +120,22 @@ if __name__ == "__main__":
     print("Jacobian determinant ja:", ja.shape)
     print("Reconstruction error:", torch.mean((x - x_recon) ** 2).item())
     print("Allclose?", torch.allclose(x, x_recon, atol=1e-8, rtol=1e-8) )
+    
+    # Create a small training loop
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    for epoch in range(1000):
+        optimizer.zero_grad()
+        y, ja = model.forward(x, c, index_p, index_v)
+        loss = torch.mean((y - y_target )**2)
+        loss.backward()
+        optimizer.step()
+        if epoch % 10 == 0:
+            print(f"Epoch {epoch}, Loss: {loss.item()}")
+        
+        # plot
+        if epoch % 20 == 0:
+            plt.scatter(y[:,0,0].detach().numpy(), y[:,0,1].detach().numpy(), label='y', alpha=0.5)
+            plt.scatter(y_target[:,0,0].detach().numpy(), y_target[:,0,1].detach().numpy(), label='y_target', alpha=0.5)
+            plt.legend()
+            plt.savefig(f"src/models/mixedflow/mixedflow_test.png")
+            plt.close()
