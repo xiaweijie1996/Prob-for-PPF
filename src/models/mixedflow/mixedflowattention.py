@@ -95,16 +95,15 @@ if __name__ == "__main__":
     batch_size = 100
     x = torch.randn(batch_size, 1, 2)
     c = torch.randn(batch_size, 33, 2)
-    y_target = torch.randn(batch_size, 1, 2)
     index_p = 1
     index_v = 1
     model = CMixedAttentionModel(
         input_dim=2,
         num_layers_spline=2,
-        num_layers_fcp=2,
-        num_blocks=1,
-        emb_dim=64,
-        num_heads=4,
+        num_layers_fcp=3,
+        num_blocks=2,
+        emb_dim=24,
+        num_heads=2,
         bias=True,
         num_nodes=33,
         num_output_nodes=1,
@@ -121,9 +120,19 @@ if __name__ == "__main__":
     print("Reconstruction error:", torch.mean((x - x_recon) ** 2).item())
     print("Allclose?", torch.allclose(x, x_recon, atol=1e-8, rtol=1e-8) )
     
+    # Define a function 
+    def y_target_func(x):
+        # x^2 + 3x + sin(2pi x)
+        _y = x**3
+        _f = torch.sigmoid(_y)
+        return _f *2 - 1  # scale to [-1, 1]
+    
     # Create a small training loop
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    print('model parameters:', sum(p.numel() for p in model.parameters() if p.requires_grad))
     for epoch in range(1000):
+        x = torch.randn(batch_size, 1, 2)
+        y_target = y_target_func(x)
         optimizer.zero_grad()
         y, ja = model.forward(x, c, index_p, index_v)
         loss = torch.mean((y - y_target )**2)
