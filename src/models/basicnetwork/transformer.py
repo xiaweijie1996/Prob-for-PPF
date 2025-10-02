@@ -21,7 +21,7 @@ class MultiHeadAttention(nn.Module):
         self.num_heads = num_heads
         self.head_dim = embed_dim // num_heads
         self.scale = self.head_dim ** -0.5
-        self.graph_info = graph_info # a adjacency matrix of shape (num_nodes, num_nodes) with 1 for connected nodes and 0 for unconnected nodes
+        self.graph_info = graph_info.unsqueeze(0).unsqueeze(0) # a adjacency matrix of shape (num_nodes, num_nodes) with 1 for connected nodes and 0 for unconnected nodes
 
         self.qkv = nn.Linear(embed_dim, 3 * embed_dim, bias=bias)
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
@@ -51,8 +51,9 @@ class MultiHeadAttention(nn.Module):
         # Apply graph info mask if provided
         if self.graph_info is not None:
             # make zero  in graph_info to -inf
-            mask = self.graph_info.unsqueeze(0).unsqueeze(0)  # (1, 1, S, S)
+            mask = self.graph_info.to(x.device)  # (1, 1, S, S)
             attn_logits = attn_logits.masked_fill(mask == 0, float('-inf'))
+            # print(attn_logits)
             attn = F.softmax(attn_logits, dim=-1)  # (B, H, S, S)
         else:
             attn = F.softmax(attn_logits, dim=-1)  # (B, H, S, S)
