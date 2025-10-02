@@ -28,7 +28,7 @@ class CSplineBasicAttention(torch.nn.Module):
                  # model features spline
                  b_interval: float = 5.0, # better to max of the output data maybe
                  k_bins: int = 10, # number of bins
-                 
+                 graph_info: torch.Tensor = None,  # adjacency matrix of shape (num_nodes, num_nodes)
                 
                  ):
         
@@ -44,6 +44,7 @@ class CSplineBasicAttention(torch.nn.Module):
         self.num_nodes = num_nodes
         self.num_output_nodes = num_output_nodes
         self.split_dim1 = 1
+        self.graph_info = graph_info # a adjacency matrix of shape (num_nodes, num_nodes) with 1 for connected nodes and 0 for unconnected nodes
         
         
         # FNN takes part of the input and output K*3 -1 parameters
@@ -55,7 +56,8 @@ class CSplineBasicAttention(torch.nn.Module):
             num_heads=self.num_heads,
             bias=self.bias,
             num_nodes=self.num_nodes + input_dim//2 +1,
-            num_output_nodes=self.num_output_nodes
+            num_output_nodes=self.num_output_nodes,
+            graph_info=self.graph_info
         )
         
         
@@ -67,7 +69,8 @@ class CSplineBasicAttention(torch.nn.Module):
             num_heads=self.num_heads,
             bias=self.bias,
             num_nodes=self.num_nodes + input_dim//2 +1,
-            num_output_nodes=self.num_output_nodes
+            num_output_nodes=self.num_output_nodes,
+            graph_info=self.graph_info
         )
         # Define a special token for null condition
         self.null_token = torch.nn.Parameter(torch.randn(1, self.emb_dim))

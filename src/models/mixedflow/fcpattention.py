@@ -23,6 +23,7 @@ class CFCPBasicAttention(torch.nn.Module):
                 num_nodes: int = 33,  # Not used in current implementation
                 num_output_nodes: int = 1,  # Not used in current implementation
                 bias: bool = True,
+                graph_info: torch.Tensor = None,  # adjacency matrix of shape (num_nodes, num_nodes)
                  ):
         
         super(CFCPBasicAttention, self).__init__()
@@ -38,8 +39,9 @@ class CFCPBasicAttention(torch.nn.Module):
             embed_dim=embed_dim,
             num_heads=num_heads,
             bias=bias,
-            num_nodes=num_nodes + 1 + self.split_dim1,  # because we add one null token and concat one x[split_dim1]
-            num_output_nodes=num_output_nodes
+            num_nodes=num_nodes + 1 + self.split_dim1,  # because we add position token and concat one x[split_dim1]
+            num_output_nodes=num_output_nodes,
+            graph_info=graph_info
         )
         
         self.transformer_s2 = transformer.TransformerEncoder(
@@ -50,7 +52,8 @@ class CFCPBasicAttention(torch.nn.Module):
             num_heads=num_heads,
             bias=bias,
             num_nodes=num_nodes + 1 + self.split_dim1,  # because we add one null token and concat one x[split_dim1]
-            num_output_nodes=num_output_nodes
+            num_output_nodes=num_output_nodes,
+            graph_info=graph_info
             
         )
         
@@ -62,7 +65,8 @@ class CFCPBasicAttention(torch.nn.Module):
             num_heads=num_heads,
             bias=bias,
             num_nodes=num_nodes + 1 + self.split_dim1,  # because we add one null token and concat one x[split_dim1]
-            num_output_nodes=num_output_nodes
+            num_output_nodes=num_output_nodes,
+            graph_info=graph_info
         )
         
         self.transformer_b2 = transformer.TransformerEncoder(
@@ -73,7 +77,8 @@ class CFCPBasicAttention(torch.nn.Module):
             num_heads=num_heads,
             bias=bias,
             num_nodes=num_nodes + 1 + self.split_dim1,  # because we add one null token and concat one x[split_dim1]
-            num_output_nodes=num_output_nodes
+            num_output_nodes=num_output_nodes,
+            graph_info=graph_info
         )
         
         #　Use adjusted sigmoid to constrain the scaling factor
@@ -176,10 +181,10 @@ if __name__ == "__main__":
         num_output_nodes=1,
         bias=True
     )
-    # y, ja = model.forward(x, c, index_p, index_v)
-    # print("Output shape:", y.shape, ja.shape)
-    # x_recon, ja_inv = model.inverse(y, c, index_p, index_v)
-    # print("Reconstructed shape:", x_recon.shape, ja_inv.shape)
+    y, ja = model.forward(x, c, index_p, index_v)
+    print("Output shape:", y.shape, ja.shape)
+    x_recon, ja_inv = model.inverse(y, c, index_p, index_v)
+    print("Reconstructed shape:", x_recon.shape, ja_inv.shape)
     
     # Create a small training loop
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)

@@ -10,7 +10,6 @@ from src.models.mixedflow.fcpattention import CFCPBasicAttention
 # Set all tensor Double globally dtyepe
 torch.set_default_dtype(torch.float64)
 
-
 class CMixedAttentionModel(torch.nn.Module):
     def __init__(self, 
                  # input features
@@ -30,6 +29,7 @@ class CMixedAttentionModel(torch.nn.Module):
                  # model features spline
                  b_interval: float = 5.0, # better to max of the output data maybe
                  k_bins: int = 10, # number of bins
+                 graph_info: torch.Tensor = None,  # adjacency matrix of shape (num_nodes, num_nodes)
                  
                 ):
         super(CMixedAttentionModel, self).__init__()
@@ -49,6 +49,7 @@ class CMixedAttentionModel(torch.nn.Module):
                 # model features spline
                 b_interval=b_interval,
                 k_bins=k_bins,
+                graph_info=graph_info
                 
             ) for _ in range(num_layers_spline)
         ])
@@ -63,6 +64,7 @@ class CMixedAttentionModel(torch.nn.Module):
                 bias=bias,
                 num_nodes=num_nodes,
                 num_output_nodes=num_output_nodes,
+                graph_info=graph_info
             ) for _ in range(num_layers_fcp)
         ])
 
@@ -95,6 +97,9 @@ if __name__ == "__main__":
     batch_size = 100
     x = torch.randn(batch_size, 1, 2)
     c = torch.randn(batch_size, 33, 2)
+    graph_info = torch.randint(0, 2, (34, 34))  # Random adjacency matrix for example
+    print("Graph info (adjacency matrix):")
+    print(graph_info.shape)
     index_p = 1
     index_v = 1
     model = CMixedAttentionModel(
@@ -123,7 +128,11 @@ if __name__ == "__main__":
     # Define a function 
     def y_target_func(x):
         # x^2 + 3x + sin(2pi x)
-        _y = x**3
+        x = torch.concat([x, c], dim=1) # (B, 34, 2)
+        x = x @ x.transpose(-1, -2)  # (B, 34, 34)
+        _y = x * graph_info # (B, 34, 34)
+        _y = _y.sum(dim=-1, keepdim=True)  # (B, 34, 1)
+        _y = torch.concat([_y, _y**3], dim=-1)  # (B, 34, 2)
         _f = torch.sigmoid(_y)
         return _f *2 - 1  # scale to [-1, 1]
     

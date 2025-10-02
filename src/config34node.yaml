@@ -233,3 +233,7 @@ MixedAttention:
     epochs: 1000000
     save_path:  'src/training/mixedflowattention/savedmodel'
     forward_loss_ratio:  0.5
+
+MixedGraphAttention:
+    # other paremeters are the same as MixedAttention
+    save_path: 'src/training/mixedflowgraphatten/savedmodel'
