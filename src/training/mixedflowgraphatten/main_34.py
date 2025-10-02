@@ -30,25 +30,25 @@ def main():
     dis_path = config['SystemAndDistribution']['dis_path']  # Path to the distribution system file
     scaler_path = config['SystemAndDistribution']['scaler_path']  # Path to save/load the scalers
     
-    input_dim = config['MixedAttention']['input_dim']  # Input dimension (P, Q)
-    num_layers_spline = config['MixedAttention']['num_layers_spline']  # Number of layers in the spline coupling layers
-    num_layers_fcp = config['MixedAttention']['num_layers_fcp']  # Number of layers in the FCP coupling layers
-    emb_dim = config['MixedAttention']['emb_dim']  # Embedding dimension for the attention mechanism
-    num_heads = config['MixedAttention']['num_heads']  # Number of attention heads
-    output_dim_fcp = config['MixedAttention']['output_dim_fcp']  # Output dimension for the FCP coupling layers
-    num_blocks = config['MixedAttention']['num_blocks']  # Number of blocks in the model
-    bias = config['MixedAttention']['bias']  # Whether to use bias in the linear layers
-    num_output_nodes = config['MixedAttention']['num_output_nodes']  # Number of output nodes
+    input_dim = config['MixedGraphAttention']['input_dim']  # Input dimension (P, Q)
+    num_layers_spline = config['MixedGraphAttention']['num_layers_spline']  # Number of layers in the spline coupling layers
+    num_layers_fcp = config['MixedGraphAttention']['num_layers_fcp']  # Number of layers in the FCP coupling layers
+    emb_dim = config['MixedGraphAttention']['emb_dim']  # Embedding dimension for the attention mechanism
+    num_heads = config['MixedGraphAttention']['num_heads']  # Number of attention heads
+    output_dim_fcp = config['MixedGraphAttention']['output_dim_fcp']  # Output dimension for the FCP coupling layers
+    num_blocks = config['MixedGraphAttention']['num_blocks']  # Number of blocks in the model
+    bias = config['MixedGraphAttention']['bias']  # Whether to use bias in the linear layers
+    num_output_nodes = config['MixedGraphAttention']['num_output_nodes']  # Number of output nodes
 
-    b_interval = config['MixedAttention']['b_interval']
-    k_bins = config['MixedAttention']['k_bins']
-    batch_size = config['MixedAttention']['batch_size']
-    epochs = config['MixedAttention']['epochs']
+    b_interval = config['MixedGraphAttention']['b_interval']
+    k_bins = config['MixedGraphAttention']['k_bins']
+    batch_size = config['MixedGraphAttention']['batch_size']
+    epochs = config['MixedGraphAttention']['epochs']
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     save_path = config['MixedGraphAttention']['save_path']
-    lr = config['MixedAttention']['lr']
-    forward_loss_ratio = config['MixedAttention'].get('forward_loss_ratio', 1.0)  # Default to 1.0 if not specified
-    baslr = config['MixedAttention'].get('baslr', 1e-5)
+    lr = config['MixedGraphAttention']['lr']
+    forward_loss_ratio = config['MixedGraphAttention'].get('forward_loss_ratio', 1.0)  # Default to 1.0 if not specified
+    baslr = config['MixedGraphAttention'].get('baslr', 1e-5)
     # -----------------------
     
     # Edge index for a fully connected graph excluding self-loops
