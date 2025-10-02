@@ -164,9 +164,7 @@ def main():
         # Loss
         loss = loss_vtp * forward_loss_ratio + loss_ptv * (1 - forward_loss_ratio) # + distribution_loss
     
-        # Add weight clipping to avoid NaN
-        torch.nn.utils.clip_grad_norm_(mix_model.parameters(), max_norm=0.5)
-        
+
         # Error
         with torch.no_grad():
             loss_mangitude = loss_function(output_voltage[:, 0], output_y[:, 0])
@@ -174,6 +172,10 @@ def main():
     
         # Backward pass and optimization
         loss.backward()
+        
+        # Add weight clipping to avoid NaN
+        torch.nn.utils.clip_grad_norm_(mix_model.parameters(), max_norm=0.5)
+        
         optimizer.step()
         
         print(f"Epoch {_+1}, Loss VTP: {loss_vtp.item():.6f}, Loss PTV: {loss_ptv.item():.6f}, Total Loss: {loss.item():.6f}, Jac: {_ja.mean().item():.6f}, Mag Err: {loss_mangitude.item():.6f}, Ang Err: {loss_angle.item():.6f}")
@@ -223,7 +225,7 @@ def main():
 
             # ✅ log the figure object, not `plt`
             # wb.log({"MixedSplineFCP_gen": fig})
-
+            
             plt.close(fig)   # close after logging
 
            

@@ -239,8 +239,6 @@ def main():
             fig.tight_layout()
             fig.savefig(os.path.join(save_path, f"MixedAttention_gen.png"))
 
-            # ✅ log the figure object, not `plt`
-            # wb.log({"MixedAttention_gen": fig})
 
             plt.close(fig)   # close after logging
 
