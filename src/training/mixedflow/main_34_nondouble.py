@@ -31,7 +31,7 @@ def main():
     
     split_ratio = config['MixedSplineFCP']['split_ratio']
     n_blocks_spline = config['MixedSplineFCP']['n_blocks_spline']
-    n_blocks_realFCP = config['MixedSplineFCP']['n_blocks_realFCP']
+    n_blocks_fcp = config['MixedSplineFCP']['n_blocks_fcp']
     hiddemen_dim = config['MixedSplineFCP']['hiddemen_dim']
     c_dim = (2 * (num_nodes - 1))  # Condition dimension (P and Q for all nodes except slack)
     n_layers = config['MixedSplineFCP']['n_layers']
@@ -59,7 +59,7 @@ def main():
         condition_dim=c_dim,
         n_layers=n_layers,
         split_ratio=split_ratio,
-        n_blocks_realFCP=n_blocks_realFCP,
+        n_blocks_fcp=n_blocks_fcp,
         n_blocks_spline=n_blocks_spline,
         hidden_dim_condition=hiddemen_dim_condition,
         n_layers_condition=n_layers_condition,
@@ -194,7 +194,7 @@ def main():
         # Save the model every 100 epochs
         if (_ + 1) > 1000 and end_loss > loss_vtp.item():
             end_loss = loss_vtp.item()
-            torch.save(mix_model.state_dict(), os.path.join(save_path, f"MixedSplineFCPmodel_{num_nodes}.pth"))
+            torch.save(mix_model.state_dict(), os.path.join(save_path, f"MixedSplineFCPmodel_nodouble_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
             
             # Plot the output vs target for power and voltage for the current p_index
@@ -221,7 +221,7 @@ def main():
             axes[1].axis('equal')
 
             fig.tight_layout()
-            fig.savefig(os.path.join(save_path, f"MixedSplineFCP_gen.png"))
+            fig.savefig(os.path.join(save_path, f"MixedSplineFCP_gen_nodouble.png"))
 
             # ✅ log the figure object, not `plt`
             # wb.log({"MixedSplineFCP_gen": fig})

@@ -23,7 +23,7 @@ class CMixedModel(torch.nn.Module):
                  n_layers: int = 3,
                  split_ratio: float = 0.5,
                  n_blocks_spline: int = 3,
-                 n_blocks_realnvp: int = 2,
+                 n_blocks_fcp: int = 2,
                  
                  
                  # model features condition
@@ -61,7 +61,7 @@ class CMixedModel(torch.nn.Module):
                 split_ratio=split_ratio,
                 hidden_dim_condition=hidden_dim_condition,
                 n_layers_condition=n_layers_condition
-            ) for _ in range(n_blocks_realnvp)
+            ) for _ in range(n_blocks_fcp)
         ])
 
     def forward(self, x, c, index_p, index_v):
