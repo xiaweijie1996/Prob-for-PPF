@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J NdRealNVP34
+#SBATCH -J RealNVP34
 #SBATCH -p gpu_a100           # use a GPU partition that 'sinfo' shows for your account
 #SBATCH -t 99:00:00
 #SBATCH -N 1
@@ -27,4 +27,4 @@ echo "Host: $(hostname)"
 nvidia-smi || true
 python -c "import torch; print('torch', torch.__version__, 'cuda?', torch.cuda.is_available())"
 
-srun python /gpfs/home4/wxia/Prob-for-PPF/src/training/crealnvp/main_34.py
+srun python /gpfs/home4/wxia/Prob-for-PPF/src/training/cfcpflow/main_34_nodouble.py
