@@ -38,8 +38,8 @@ def main():
     input_dim = config['MixedSplineFCP']['input_dim']  # Input dimension (P and Q for one node)
     hiddemen_dim_condition = config['MixedSplineFCP']['hiddemen_dim_condition']
     n_layers_condition = config['MixedSplineFCP']['n_layers_condition']
-    b_interval = config['MixedSplineFCP']['b_interval']
-    k_bins = config['MixedSplineFCP']['k_bins']
+    b_interval = 15 # config['MixedSplineFCP']['b_interval']
+    k_bins = 15 # config['MixedSplineFCP']['k_bins']
     
     batch_size = config['MixedSplineFCP']['batch_size']
     epochs = config['MixedSplineFCP']['epochs']
