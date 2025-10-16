@@ -12,11 +12,7 @@ class CTarflowBasic(torch.nn.Module):
     def __init__(self, 
                 # Encoder features
                 input_dim: int,
-<<<<<<< HEAD
-                num_blocks_econder: int,
-=======
                 num_blocks_encoder: int,
->>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
                 output_dim: int,
                 
                 # Attention features
@@ -37,11 +33,7 @@ class CTarflowBasic(torch.nn.Module):
         # Define the Transformer encoders
         self.transformer_s1 = transformer.TransformerEncoder(
             input_dim=input_dim,
-<<<<<<< HEAD
-            num_blocks=num_blocks_econder,
-=======
             num_blocks=num_blocks_encoder,
->>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
             output_dim=output_dim,
             embed_dim=embed_dim,
             num_heads=num_heads,
@@ -52,11 +44,7 @@ class CTarflowBasic(torch.nn.Module):
         
         self.transformer_s2 = transformer.TransformerEncoder(
             input_dim=input_dim,
-<<<<<<< HEAD
-            num_blocks=num_blocks_econder,
-=======
             num_blocks=num_blocks_encoder,
->>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
             output_dim=output_dim,
             embed_dim=embed_dim,
             num_heads=num_heads,
@@ -68,11 +56,7 @@ class CTarflowBasic(torch.nn.Module):
         
         self.transformer_b1 = transformer.TransformerEncoder(
             input_dim=input_dim,
-<<<<<<< HEAD
-            num_blocks=num_blocks_econder,
-=======
             num_blocks=num_blocks_encoder,
->>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
             output_dim=output_dim,
             embed_dim=embed_dim,
             num_heads=num_heads,
@@ -83,11 +67,7 @@ class CTarflowBasic(torch.nn.Module):
         
         self.transformer_b2 = transformer.TransformerEncoder(
             input_dim=input_dim,
-<<<<<<< HEAD
-            num_blocks=num_blocks_econder,
-=======
             num_blocks=num_blocks_encoder,
->>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
             output_dim=output_dim,
             embed_dim=embed_dim,
             num_heads=num_heads,
@@ -170,11 +150,7 @@ class CTarflow(torch.nn.Module):
                  
                 # Encoder features
                 input_dim: int,
-<<<<<<< HEAD
-                num_blocks_econder: int,
-=======
                 num_blocks_encoder: int,
->>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
                 output_dim: int,
                 
                 # Attention features
@@ -192,11 +168,7 @@ class CTarflow(torch.nn.Module):
         self.layers = torch.nn.ModuleList([
             CTarflowBasic(
                 input_dim=input_dim,
-<<<<<<< HEAD
-                num_blocks_econder=num_blocks_econder,
-=======
                 num_blocks_encoder=num_blocks_encoder,
->>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
                 output_dim=output_dim,
                 embed_dim=embed_dim,
                 num_heads=num_heads,
@@ -229,11 +201,7 @@ if __name__ == "__main__":
     model = CTarflow(
         num_layers=2,
         input_dim=2,
-<<<<<<< HEAD
-        num_blocks_econder=2,
-=======
         num_blocks_encoder=2,
->>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
         output_dim=1,
         embed_dim=32,
         num_heads=4,

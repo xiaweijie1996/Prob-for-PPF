@@ -39,7 +39,7 @@ def main():
     num_output_nodes = config['CTarflow']['num_output_nodes']
     bias = config['CTarflow']['bias']
     
-    lr = config['CTarflow']['learning_rate']
+    lr = config['CTarflow']['lr']
     epochs = config['CTarflow']['epochs']
     batch_size = config['CTarflow']['batch_size']
     save_path = config['CTarflow']['save_path']
