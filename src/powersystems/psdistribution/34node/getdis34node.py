@@ -37,11 +37,15 @@ def main():
     
     # Power
     _active_power1 = np.random.normal(loc=mean_vector[1:], scale=std, size=(batch_size, num_nodes-1))
-    _reactive_power1 = np.random.normal(loc=mean_vector[1:], scale=std, size=(batch_size, num_nodes-1)) * power_factor
+    # _reactive_power1 = np.random.normal(loc=mean_vector[1:], scale=std, size=(batch_size, num_nodes-1)) * power_factor
+    _reactive_power1 = _active_power1 * power_factor
     _active_power2 = np.random.normal(loc=mean_vector[1:], scale=std, size=(batch_size, num_nodes-1)) *0.6
-    _reactive_power2 = np.random.normal(loc=mean_vector[1:], scale=std, size=(batch_size, num_nodes-1)) * power_factor*0.6
+    # _reactive_power2 = np.random.normal(loc=mean_vector[1:], scale=std, size=(batch_size, num_nodes-1)) * power_factor*0.6
+    _reactive_power2 = _active_power2 * power_factor
     _active_power3 = np.random.normal(loc=mean_vector[1:], scale=std, size=(batch_size, num_nodes-1)) *1.4
-    _reactive_power3 = np.random.normal(loc=mean_vector[1:], scale=std, size=(batch_size, num_nodes-1)) * power_factor*1.4
+    # _reactive_power3 = np.random.normal(loc=mean_vector[1:], scale=std, size=(batch_size, num_nodes-1)) * power_factor*1.4
+    _reactive_power3 = _active_power3 * power_factor
+    
     _active_power = np.vstack([_active_power1, _active_power2, _active_power3])
     _reactive_power = np.vstack([_reactive_power1, _reactive_power2, _reactive_power3])
     

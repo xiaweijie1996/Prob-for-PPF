@@ -15,7 +15,6 @@ class CSplineBasicAttention(torch.nn.Module):
     def __init__(self, 
                  # input features
                  input_dim: int = 2,
-                 
         
                  # model features transformer
                  num_blocks: int = 4,
