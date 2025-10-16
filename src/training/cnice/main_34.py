@@ -207,8 +207,8 @@ def main():
             fig.tight_layout()
             fig.savefig('src/training/cnice/savedmodel/cnice_gen.png')
 
-            # ✅ log the figure object, not `plt`
-            wb.log({"cnice_gen": fig})
+            # # ✅ log the figure object, not `plt`
+            # wb.log({"cnice_gen": fig})
 
             plt.close(fig)   # close after logging
 
