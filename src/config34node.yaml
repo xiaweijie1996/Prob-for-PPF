@@ -74,6 +74,32 @@ CSpline:
   save_path:  'src/training/cspline/savedmodel'
   forward_loss_ratio:  0.5
 
+<<<<<<< HEAD
+=======
+
+
+CFCP:
+  # Model parameters
+  split_ratio:  0.5
+  n_blocks:  4
+  hiddemen_dim:  256
+  c_dim:  66
+  n_layers:  3
+  input_dim:  2  # Assuming each node has a real and imaginary part
+  hiddemen_dim_condition:  256
+  output_dim_condition:  1
+  n_layers_condition:  3
+
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/training/cfcpflow/savedmodel'
+  forward_loss_ratio:  0.5
+
+
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
 Gnn:
   # Graph parameters
   dim_node_feature:  2
@@ -108,7 +134,11 @@ NN:
   epochs: 500000
   save_path:  'src/training/nn/savedmodel'
 
+<<<<<<< HEAD
 MixedSplineNVP:
+=======
+MixedSplineFCP:
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
 # Input parameters
   input_dim:  2
   c_dim:  66
@@ -117,7 +147,11 @@ MixedSplineNVP:
   # Model features main
   split_ratio:  0.5
   n_blocks_spline: 3
+<<<<<<< HEAD
   n_blocks_realnvp: 2
+=======
+  n_blocks_fcp: 2
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
   n_layers:  3
 
   # Model Features condition
@@ -161,4 +195,83 @@ PFnet:
   batch_size:  1000
   lr: 0.001
   epochs: 500000
+<<<<<<< HEAD
   save_path:  'src/training/powerflownet/savedmodel'
+=======
+  save_path:  'src/training/powerflownet/savedmodel'
+
+
+CTarflow:
+  # Model parameters
+  num_layers: 5
+
+  input_dim: 2
+  num_blocks_encoder: 1
+  output_dim: 1 # 1/2 input_dim
+  embed_dim: 128
+  num_heads: 2
+  num_nodes: 33
+  num_output_nodes: 1
+  bias: True
+
+  # Training parameters
+  forward_loss_ratio: 0.5
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/training/ctarflow/savedmodel'
+
+MixedAttention:
+    # Input parameters
+    input_dim:  2
+    
+    # Model features main
+    num_layers_spline: 3
+    num_layers_fcp: 2
+    emb_dim: 100
+    num_heads: 2
+    output_dim_fcp: 1 # 1/2 input_dim
+    num_blocks: 3 #
+    bias: True
+    num_nodes: 33
+    num_output_nodes: 1
+
+    # Model Features condition
+    b_interval: 8
+    k_bins:  10
+
+    # Training parameters
+    batch_size:  1000
+    lr: 0.0005
+    baslr: 0.00001
+    epochs: 1000000
+    save_path:  'src/training/mixedflowattention/savedmodel'
+    forward_loss_ratio:  0.5
+
+MixedGraphAttention:
+    # Input parameters
+    input_dim:  2
+    
+    # Model features main
+    num_layers_spline: 3
+    num_layers_fcp: 2
+    emb_dim: 78
+    num_heads: 2
+    output_dim_fcp: 1 # 1/2 input_dim
+    num_blocks: 3 #
+    bias: True
+    num_nodes: 33
+    num_output_nodes: 1
+
+    # Model Features condition
+    b_interval: 8
+    k_bins:  10
+
+    # Training parameters
+    batch_size:  1000
+    lr: 0.0005
+    baslr: 0.00001
+    epochs: 1000000
+    save_path: 'src/training/mixedflowgraphatten/savedmodel'
+    forward_loss_ratio:  0.5
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab

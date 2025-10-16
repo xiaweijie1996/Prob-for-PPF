@@ -29,22 +29,22 @@ def main():
     dis_path = config['SystemAndDistribution']['dis_path']  # Path to the distribution system file
     scaler_path = config['SystemAndDistribution']['scaler_path']  # Path to save/load the scalers
     
-    split_ratio = config['CRealnvp']['split_ratio']
-    n_blocks = config['CRealnvp']['n_blocks']
-    hiddemen_dim = config['CRealnvp']['hiddemen_dim']
+    split_ratio = config['CFCP']['split_ratio']
+    n_blocks = config['CFCP']['n_blocks']
+    hiddemen_dim = config['CFCP']['hiddemen_dim']
     c_dim = (2 * (num_nodes - 1))  # Condition dimension (P and Q for all nodes except slack)
-    n_layers = config['CRealnvp']['n_layers']
-    input_dim = config['CRealnvp']['input_dim']  # Input dimension (P and Q for one node)
-    hiddemen_dim_condition = config['CRealnvp']['hiddemen_dim_condition']
-    output_dim_condition = config['CRealnvp']['output_dim_condition']
-    n_layers_condition = config['CRealnvp']['n_layers_condition']
+    n_layers = config['CFCP']['n_layers']
+    input_dim = config['CFCP']['input_dim']  # Input dimension (P and Q for one node)
+    hiddemen_dim_condition = config['CFCP']['hiddemen_dim_condition']
+    output_dim_condition = config['CFCP']['output_dim_condition']
+    n_layers_condition = config['CFCP']['n_layers_condition']
     
-    batch_size = config['CRealnvp']['batch_size']
-    epochs = config['CRealnvp']['epochs']
+    batch_size = config['CFCP']['batch_size']
+    epochs = config['CFCP']['epochs']
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    save_path = config['CRealnvp']['save_path']
-    lr = config['CRealnvp']['lr']
-    forward_loss_ratio = config['CRealnvp'].get('forward_loss_ratio', 1.0)  # Default to 1.0 if not specified
+    save_path = config['CFCP']['save_path']
+    lr = config['CFCP']['lr']
+    forward_loss_ratio = config['CFCP'].get('forward_loss_ratio', 1.0)  # Default to 1.0 if not specified
     # -----------------------
     
     # Initialize the random system
@@ -85,13 +85,13 @@ def main():
     loss_function = torch.nn.MSELoss()
     
     # Initialize Weights and Biases
-    wb.init(project=f"CRealnvp-node-{num_nodes}")
+    wb.init(project=f"CFCP-node-{num_nodes}")
     
     # Log Model size
     wb.log({"Model Parameters": sum(p.numel() for p in realnvp_model.parameters() if p.requires_grad)})
     
     # Load already trained model if exists
-    model_path = os.path.join(save_path, f"CRealnvpmodel_{num_nodes}.pth")
+    model_path = os.path.join(save_path, f"CFCPmodel_{num_nodes}.pth")
     if os.path.exists(model_path):
         realnvp_model.load_state_dict(torch.load(model_path))
         print(f"Loaded model from {model_path}")
@@ -192,7 +192,7 @@ def main():
         # Save the model every 100 epochs
         if (_ + 1) > 10000 and end_loss > loss_forward.item():
             end_loss = loss_forward.item()
-            torch.save(realnvp_model.state_dict(), os.path.join(save_path, f"CRealnvpmodel_{num_nodes}.pth"))
+            torch.save(realnvp_model.state_dict(), os.path.join(save_path, f"CFCPmodel_{num_nodes}.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
             
             # Plot the output vs target for power and voltage for the current p_index
@@ -219,10 +219,10 @@ def main():
             axes[1].axis('equal')
 
             fig.tight_layout()
-            fig.savefig(os.path.join(save_path, f"CRealnvp_gen.png"))
+            fig.savefig(os.path.join(save_path, f"CFCP_gen.png"))
 
             # ✅ log the figure object, not `plt`
-            # wb.log({"CRealnvp_gen": fig})
+            # wb.log({"CFCP_gen": fig})
 
             plt.close(fig)   # close after logging
 

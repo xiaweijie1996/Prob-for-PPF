@@ -12,14 +12,24 @@ class MultiHeadAttention(nn.Module):
         embed_dim (int): Channel size.
         num_heads (int): Number of heads (embed_dim must be divisible by num_heads).
         bias (bool): Use bias in linear layers.
+<<<<<<< HEAD
     """
     def __init__(self, embed_dim: int, num_heads: int, bias: bool = True):
+=======
+        graph_info (torch.Tensor): using graph information for attention mask. this is a (num_nodes, num_nodes) tensor.
+    """
+    def __init__(self, embed_dim: int, num_heads: int, bias: bool = True, graph_info: torch.Tensor = None):
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
         super().__init__()
         assert embed_dim % num_heads == 0, "embed_dim must be divisible by num_heads"
         self.embed_dim = embed_dim
         self.num_heads = num_heads
         self.head_dim = embed_dim // num_heads
         self.scale = self.head_dim ** -0.5
+<<<<<<< HEAD
+=======
+        self.graph_info = graph_info.unsqueeze(0).unsqueeze(0) # a adjacency matrix of shape (num_nodes, num_nodes) with 1 for connected nodes and 0 for unconnected nodes
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
 
         self.qkv = nn.Linear(embed_dim, 3 * embed_dim, bias=bias)
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
@@ -31,7 +41,11 @@ class MultiHeadAttention(nn.Module):
         x = x.transpose(1, 2)  # (B, H, S, Dh)
         return x
 
+<<<<<<< HEAD
     def forward(self, x: torch.Tensor, need_weights: bool = False):
+=======
+    def forward(self, x: torch.Tensor, need_weights: bool = False) -> torch.Tensor:
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
         B, s_len, e_d = x.size()
         assert e_d == self.embed_dim, f"Expected input with {self.embed_dim} channels, got {e_d}"
 
@@ -46,8 +60,21 @@ class MultiHeadAttention(nn.Module):
 
         # Attention
         attn_logits = torch.matmul(qh, kh.transpose(-2, -1)) * self.scale  # (B, H, S, S)
+<<<<<<< HEAD
         attn = F.softmax(attn_logits, dim=-1)
 
+=======
+        # Apply graph info mask if provided
+        if self.graph_info is not None:
+            # make zero  in graph_info to -inf
+            mask = self.graph_info.to(x.device)  # (1, 1, S, S)
+            attn_logits = attn_logits.masked_fill(mask == 0, float('-inf'))
+            # print(attn_logits)
+            attn = F.softmax(attn_logits, dim=-1)  # (B, H, S, S)
+        else:
+            attn = F.softmax(attn_logits, dim=-1)  # (B, H, S, S)
+        
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
         # Aggregate
         out_heads = torch.matmul(attn, vh)     # (B, H, S, Dh)
 
@@ -64,9 +91,16 @@ class TransformerBlock(nn.Module):
                  embed_dim: int,
                  num_heads: int,
                  ff_hidden_dim: int,
+<<<<<<< HEAD
                  bias: bool = True):
         super().__init__()
         self.attn = MultiHeadAttention(embed_dim, num_heads, bias=bias)
+=======
+                 graph_info: torch.Tensor,
+                 bias: bool = True):
+        super().__init__()
+        self.attn = MultiHeadAttention(embed_dim, num_heads, bias=bias, graph_info=graph_info)
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
         self.attn_layer_norm = nn.LayerNorm(embed_dim)
         self.ff = nn.Sequential(
             nn.Linear(embed_dim, ff_hidden_dim, bias=bias),
@@ -104,6 +138,10 @@ class TransformerEncoder(nn.Module):
                 num_nodes: int = 33,  # Not used in current implementation
                 num_output_nodes: int = 1,  # Not used in current implementation
                 bias: bool = True,
+<<<<<<< HEAD
+=======
+                graph_info: torch.Tensor = None,  # adjacency matrix of shape (num_nodes, num_nodes)
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
                 ):
         super().__init__()
         # Initialize parameters
@@ -124,6 +162,10 @@ class TransformerEncoder(nn.Module):
                 embed_dim=embed_dim,
                 num_heads=num_heads,
                 ff_hidden_dim=embed_dim * 4,
+<<<<<<< HEAD
+=======
+                graph_info=graph_info,
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
                 bias=bias
             ) for _ in range(num_blocks)
         ])
@@ -204,7 +246,12 @@ if __name__ == "__main__":
     x = torch.randn(2, 33, 2)  # (B, T, C)
     B, T, C = x.size()
     H = 2
+<<<<<<< HEAD
         
+=======
+    graph_info = torch.randint(0, 2, (T+1, T+1))  # Random adjacency matrix for example
+   
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
     # Transformer Encoder
     encoder = TransformerEncoder(
         input_dim=2,
@@ -215,6 +262,10 @@ if __name__ == "__main__":
         bias=True,
         num_nodes=34, # because we add one null token
         num_output_nodes=1,
+<<<<<<< HEAD
+=======
+        graph_info=graph_info
+>>>>>>> ce9a0bfd330f755c4db5f2ac31409e9186d663ab
         
     )
     index_p = 1
