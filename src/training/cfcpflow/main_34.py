@@ -91,7 +91,7 @@ def main():
     wb.log({"Model Parameters": sum(p.numel() for p in realnvp_model.parameters() if p.requires_grad)})
     
     # Load already trained model if exists
-    model_path = os.path.join(save_path, f"CFCPmodel_{num_nodes}.pth")
+    model_path = os.path.join(save_path, f"FCPflow_{num_nodes}.pth")
     if os.path.exists(model_path):
         realnvp_model.load_state_dict(torch.load(model_path))
         print(f"Loaded model from {model_path}")
