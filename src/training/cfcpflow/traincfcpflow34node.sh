@@ -27,4 +27,4 @@ echo "Host: $(hostname)"
 nvidia-smi || true
 python -c "import torch; print('torch', torch.__version__, 'cuda?', torch.cuda.is_available())"
 
-srun python /gpfs/home4/wxia/Prob-for-PPF/src/training/crealnvp/main_34.py
+srun python /gpfs/home4/wxia/Prob-for-PPF/src/training/cfcpflow/main_34.py
