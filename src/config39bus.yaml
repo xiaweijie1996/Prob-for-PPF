@@ -89,7 +89,7 @@ CFCP:
   n_layers_condition:  3
 
   # Training parameters
-  learning_rate:  0.0001
+  learning_rate:  0.001
   batch_size:  64
   lr: 0.001
   epochs: 100000

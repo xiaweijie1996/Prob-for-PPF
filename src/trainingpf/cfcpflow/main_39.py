@@ -90,11 +90,11 @@ def main():
     # Define the loss function
     loss_function = torch.nn.MSELoss()
     
-    # # Initialize Weights and Biases
-    # wb.init(project=f"CFCP-node-{num_nodes}")
+    # Initialize Weights and Biases
+    wb.init(project=f"CFCP-node-{num_nodes}")
     
-    # # Log Model size
-    # wb.log({"Model Parameters": sum(p.numel() for p in fcp_model.parameters() if p.requires_grad)})
+    # Log Model size
+    wb.log({"Model Parameters": sum(p.numel() for p in fcp_model.parameters() if p.requires_grad)})
     
     # Load already trained model if exists
     model_path = os.path.join(save_path, f"FCPflow_{num_nodes}.pth")
@@ -193,15 +193,15 @@ def main():
         print(f"Epoch {_+1}, Loss Forward: {loss_forward.item():.6f}, Loss Backward: {loss_backward.item():.6f}, Jacobean: {_ja.mean().item():.6f}, Percentage Error Magnitude: {loss_mangitude.item():.6f}, Percentage Error Angle: {loss_angle.item():.6f}")
         
         # ----------Log to Weights and Biases
-        # wb.log({
-        #     "loss_forward": loss_forward.item(),
-        #     "loss_backward": loss_backward.item(),
-        #     "jacobian": _ja.mean().item(),
-        #     "epoch": _+1,
-        #     "percentage_error_magnitude": loss_mangitude.item(),
-        #     "percentage_error_angle": loss_angle.item(),
-        #     # "distribution_loss": distribution_loss.item()
-        # })
+        wb.log({
+            "loss_forward": loss_forward.item(),
+            "loss_backward": loss_backward.item(),
+            "jacobian": _ja.mean().item(),
+            "epoch": _+1,
+            "percentage_error_magnitude": loss_mangitude.item(),
+            "percentage_error_angle": loss_angle.item(),
+            # "distribution_loss": distribution_loss.item()
+        })
         
         # Save the model every 100 epochs
         if (_ + 1) > 100 and end_loss > loss_forward.item():
