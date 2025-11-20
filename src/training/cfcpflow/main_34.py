@@ -176,7 +176,7 @@ def main():
         loss.backward()
         optimizer.step()
         
-        # print(f"Epoch {_+1}, Loss Forward: {loss_forward.item():.6f}, Loss Backward: {loss_backward.item():.6f}, Jacobean: {_ja.mean().item():.6f}, Percentage Error Magnitude: {loss_mangitude.item():.6f}, Percentage Error Angle: {loss_angle.item():.6f}")
+        print(f"Epoch {_+1}, Loss Forward: {loss_forward.item():.6f}, Loss Backward: {loss_backward.item():.6f}, Jacobean: {_ja.mean().item():.6f}, Percentage Error Magnitude: {loss_mangitude.item():.6f}, Percentage Error Angle: {loss_angle.item():.6f}")
         
         # ----------Log to Weights and Biases
         wb.log({
@@ -190,9 +190,9 @@ def main():
         })
         
         # Save the model every 100 epochs
-        if (_ + 1) > 10000 and end_loss > loss_forward.item():
+        if (_ + 1) > 100 and end_loss > loss_forward.item():
             end_loss = loss_forward.item()
-            torch.save(realnvp_model.state_dict(), os.path.join(save_path, f"CFCPmodel_{num_nodes}.pth"))
+            torch.save(realnvp_model.state_dict(), os.path.join(save_path, f"CFCPmodel_{num_nodes}_new.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
             
             # Plot the output vs target for power and voltage for the current p_index
@@ -219,7 +219,7 @@ def main():
             axes[1].axis('equal')
 
             fig.tight_layout()
-            fig.savefig(os.path.join(save_path, f"CFCP_gen.png"))
+            fig.savefig(os.path.join(save_path, f"CFCP_gen_new.png"))
 
             # ✅ log the figure object, not `plt`
             # wb.log({"CFCP_gen": fig})
