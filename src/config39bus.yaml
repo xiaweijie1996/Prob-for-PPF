@@ -1,0 +1,262 @@
+SystemAndDistribution:
+  node: 39
+  load_bus_num: 21
+  power_factor: 0.6
+  std: 10 # standard deviation of power injection noise
+  save_path: ''
+  batch_size: 20000
+  n_components: 5 # number of Gaussian components
+  mean_vector_start: 50
+  load_variance_rate: 0.1
+
+CNice:
+  # Model parameters
+  split_ratio:  0.5
+  n_blocks:  4
+  hiddemen_dim:  256
+  c_dim:  66
+  n_layers:  4
+  input_dim:  2  # Assuming each node has a real and imaginary part
+  hiddemen_dim_condition:  256
+  output_dim_condition:  1
+  n_layers_condition:  3
+
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/trainingpf/cnice/savedmodel'
+
+
+CRealnvp:
+  # Model parameters
+  split_ratio:  0.5
+  n_blocks:  4
+  hiddemen_dim:  256
+  c_dim:  66
+  n_layers:  3
+  input_dim:  2  # Assuming each node has a real and imaginary part
+  hiddemen_dim_condition:  256
+  output_dim_condition:  1
+  n_layers_condition:  3
+
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/trainingpf/crealnvp/savedmodel'
+  forward_loss_ratio:  0.5
+
+CSpline:
+  # Input parameters
+  input_dim:  2
+  c_dim:  66
+  hiddemen_dim:  256
+
+  # Model features main
+  split_ratio:  0.5
+  n_blocks:  5
+  n_layers:  3
+
+  # Model Features condition
+  hiddemen_dim_condition:  256
+  n_layers_condition:  3
+  b_interval: 6
+  k_bins:  10
+
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/trainingpf/cspline/savedmodel'
+  forward_loss_ratio:  0.5
+
+
+
+CFCP:
+  # Model parameters
+  split_ratio:  0.5
+  n_blocks:  4
+  hiddemen_dim:  96
+  c_dim:  33
+  n_layers:  3
+  input_dim:  2  # Assuming each node has a real and imaginary part
+  hiddemen_dim_condition:  128
+  output_dim_condition:  1
+  n_layers_condition:  3
+
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  64
+  lr: 0.001
+  epochs: 100000
+  save_path:  'src/trainingpf/cfcpflow/savedmodel'
+  forward_loss_ratio:  0.5
+
+
+Gnn:
+  # Graph parameters
+  dim_node_feature:  2
+  
+  # Graph convolution parameters
+  gnn_num_hidden_layers: 4
+  hidden_dim:  368
+  num_block:  6
+
+  # MLP parameters
+  # mlp_hidden_dim:  258
+  # mlp_num_hidden_layers:  2
+
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/trainingpf/gnn/savedmodel'
+
+NN:
+  # Input parameters
+  c_dim:  66
+  hiddemen_dim:  860
+  n_layers : 7
+
+
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/trainingpf/nn/savedmodel'
+
+MixedSplineFCP:
+# Input parameters
+  input_dim:  2
+  c_dim:  66
+  hiddemen_dim:  256
+
+  # Model features main
+  split_ratio:  0.5
+  n_blocks_spline: 3
+  n_blocks_fcp: 2
+  n_layers:  3
+
+  # Model Features condition
+  hiddemen_dim_condition:  200
+  n_layers_condition:  3
+  b_interval: 6
+  k_bins:  10
+
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/trainingpf/mixedsplinenvp/savedmodel'
+  forward_loss_ratio:  0.5
+
+
+Pinn:
+  # Model parameters
+  num_blocks: 6
+  hidden_channel: 452
+
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  50
+  lr: 0.001
+  epochs: 1000000
+  save_path:  'src/trainingpf/pinn/savedmodel'
+
+PFnet:
+  # Model parameters
+  # num_nodes : 33
+  hidden_dim: 186
+  nfeature_dim: 2
+  n_blocks: 6
+  K_convs: 3
+  K: 3
+
+  # Training parameters
+  learning_rate:  0.0001
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/trainingpf/powerflownet/savedmodel'
+
+
+CTarflow:
+  # Model parameters
+  num_layers: 5
+
+  input_dim: 2
+  num_blocks_encoder: 1
+  output_dim: 1 # 1/2 input_dim
+  embed_dim: 128
+  num_heads: 2
+  num_nodes: 33
+  num_output_nodes: 1
+  bias: True
+
+  # Training parameters
+  forward_loss_ratio: 0.5
+  batch_size:  1000
+  lr: 0.001
+  epochs: 500000
+  save_path:  'src/trainingpf/ctarflow/savedmodel'
+
+MixedAttention:
+    # Input parameters
+    input_dim:  2
+    
+    # Model features main
+    num_layers_spline: 3
+    num_layers_fcp: 2
+    emb_dim: 100
+    num_heads: 2
+    output_dim_fcp: 1 # 1/2 input_dim
+    num_blocks: 3 #
+    bias: True
+    num_nodes: 33
+    num_output_nodes: 1
+
+    # Model Features condition
+    b_interval: 8
+    k_bins:  10
+
+    # Training parameters
+    batch_size:  1000
+    lr: 0.0005
+    baslr: 0.00001
+    epochs: 1000000
+    save_path:  'src/trainingpf/mixedflowattention/savedmodel'
+    forward_loss_ratio:  0.5
+
+MixedGraphAttention:
+    # Input parameters
+    input_dim:  2
+    
+    # Model features main
+    num_layers_spline: 3
+    num_layers_fcp: 2
+    emb_dim: 78
+    num_heads: 2
+    output_dim_fcp: 1 # 1/2 input_dim
+    num_blocks: 3 #
+    bias: True
+    num_nodes: 33
+    num_output_nodes: 1
+
+    # Model Features condition
+    b_interval: 8
+    k_bins:  10
+
+    # Training parameters
+    batch_size:  1000
+    lr: 0.0005
+    baslr: 0.00001
+    epochs: 1000000
+    save_path: 'src/trainingpf/mixedflowgraphatten/savedmodel'
+    forward_loss_ratio:  0.5

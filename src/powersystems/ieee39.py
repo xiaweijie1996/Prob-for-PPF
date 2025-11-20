@@ -13,8 +13,8 @@ class Case39PF:
         """
         self.net = pn.case39()
     
-    @property
-    def _diagnose(self):
+    
+    def _diagnose(self, savepath=None):
         """
         Print a summary of the network.
         """
@@ -29,6 +29,24 @@ class Case39PF:
         print("Default range of q_mvar:", self.net.res_load.q_mvar.min(), self.net.load.q_mvar.max())
         print("Load data:")
         print(self.net.load)
+        
+        if savepath is not None:
+            # save as a text file
+            with open(savepath, 'w') as f:
+                # write the network summary
+                # Network features
+                f.write('Network features\n')
+                f.write(str(self.net))
+                # Bus data
+                f.write('\nBus data:\n')
+                f.write(str(self.net.res_bus))
+                # Default range of p_mw
+                f.write('\nDefault range of p_mw: {} {}\n'.format(self.net.res_load.p_mw.min(), self.net.res_load.p_mw.max()))
+                # Default range of q_mvar
+                f.write('Default range of q_mvar: {} {}\n'.format(self.net.res_load.q_mvar.min(), self.net.load.q_mvar.max()))
+                # Load data
+                f.write('\nLoad data:\n')
+                f.write(str(self.net.load))
     
     
     def bus_index(self):
@@ -99,12 +117,14 @@ class Case39PF:
 if __name__ == "__main__":
 
     case39 = Case39PF()
-    # case39._diagnose
-    # print(case39.net.res_bus)
+    savepath = "src/powersystems/files/ieee39_diagnose.txt"
+    case39._diagnose(savepath=savepath)
+    print(case39.net.res_bus)
     # change the loads
     length = len(case39.net.load)
     p_vec = [199 for i in range(length)]
     q_vec = [30  for i in range(length)]
+    
     case39.set_loads(p_vec, q_vec)
     
     # Sys input

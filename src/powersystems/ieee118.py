@@ -9,9 +9,8 @@ class Case118PF:
         - p_vec, q_vec: lists or arrays matching the number of loads (net.load).
         """
         self.net = pn.case118()
-    
-    @property   
-    def _diagnose(self):
+      
+    def _diagnose(self, savepath=None):
         """
         Print a summary of the network.
         """
@@ -26,6 +25,25 @@ class Case118PF:
         print("Default range of q_mvar:", self.net.res_load.q_mvar.min(), self.net.load.q_mvar.max())
         print("Load data:")
         print(self.net.load)
+        
+        if savepath is not None:
+            # save as a text file
+            with open(savepath, 'w') as f:
+                # write the network summary
+                # Network features
+                f.write('Network features\n')
+                f.write(str(self.net))
+                # Bus data
+                f.write('\nBus data:\n')
+                f.write(str(self.net.res_bus))
+                # Default range of p_mw
+                f.write('\nDefault range of p_mw: {} {}\n'.format(self.net.res_load.p_mw.min(), self.net.res_load.p_mw.max()))
+                # Default range of q_mvar
+                f.write('Default range of q_mvar: {} {}\n'.format(self.net.res_load.q_mvar.min(), self.net.load.q_mvar.max()))
+                # Load data
+                f.write('\nLoad data:\n')
+                f.write(str(self.net.load))
+                
         
     def set_loads(self, 
                 p_vec: np.ndarray,
@@ -57,15 +75,16 @@ class Case118PF:
 if __name__ == "__main__":
 
     case39 = Case118PF()
-    case39._diagnose()
+    savepath = "src/powersystems/files/ieee118_diagnose.txt"
+    case39._diagnose(savepath=savepath)
     
-    # change the loads
-    length = len(case39.net.load)
-    p_vec = [50 * 1 for i in range(length)]  # Example active power values
-    q_vec = [12 * 1 for i in range(length)]
-    case39.set_loads(p_vec, q_vec)
+    # # change the loads
+    # length = len(case39.net.load)
+    # p_vec = [50 * 1 for i in range(length)]  # Example active power values
+    # q_vec = [12 * 1 for i in range(length)]
+    # case39.set_loads(p_vec, q_vec)
     
-    # Example usage of the power flow analysis
-    print("Running power flow analysis with modified loads...")
-    result = case39.run_pf()
-    print("Power flow results:", result)
+    # # Example usage of the power flow analysis
+    # print("Running power flow analysis with modified loads...")
+    # result = case39.run_pf()
+    # print("Power flow results:", result)
