@@ -116,7 +116,7 @@ def main():
         p_index = torch.randint(0, load_bus_num, (1,)).item()  # Random index for the power input for load bus (0 to 20)
         v_index = p_index
         for _b in range(batch_size):
-            coeff_active = np.random.uniform(-1, 1)
+            coeff_active = np.random.uniform(-1, 1, size=load_bus_num)
             _active_power = base_ap + coeff_active * load_variance_rate * base_ap
             _reactive_power = _active_power * load_rato
             _active_power = _active_power.reshape(-1)

@@ -85,10 +85,14 @@ fcp_model.eval()
 
 # --------------------
 # Create the data for evaluation
-power_mse_list = []
-power_rmse_list = []
-voltage_mse_list = []
-voltage_rmse_list = []
+power_active_mse_list = []
+power_active_rmse_list = []
+power_reactive_mse_list = []
+power_reactive_rmse_list = []
+voltage_magnitude_mse_list = []
+voltage_magnitude_rmse_list = []
+voltage_angle_mse_list = []
+voltage_angle_rmse_list = []
 for p_index in range(load_bus_num):
     input_x = torch.empty((0, 2), dtype=torch.float64).to(device)
     input_c = torch.empty((0, c_dim), dtype=torch.float64).to(device)
@@ -96,7 +100,7 @@ for p_index in range(load_bus_num):
     v_index = p_index
     print(f"Evaluating for load bus index: {p_index}")
     for _b in tqdm(range(10)):
-        coeff_active = np.random.uniform(-1, 1)
+        coeff_active = np.random.uniform(-1, 1, size=load_bus_num)
         _active_power = base_ap + coeff_active * load_variance_rate * base_ap
         _reactive_power = _active_power * load_rato
         _active_power = _active_power.reshape(-1)
@@ -148,32 +152,42 @@ for p_index in range(load_bus_num):
         # Backward pass to get the output power
         output_power, _j = fcp_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
             
-        # Transform back to original scale
+        # # Transform back to original scale
         output_power_np = output_power.cpu().numpy()
         output_voltage_np = output_voltage.cpu().numpy()
-        output_power_np[:, 0] = (output_power_np[:, 0] + 1) * scaler['mean_active_power'][p_index]
-        output_power_np[:, 1] = (output_power_np[:, 1] + 1) * scaler['mean_reactive_power'][p_index]
-        output_voltage_np[:, 0] = (output_voltage_np[:, 0] + 1) * scaler['mean_voltage_magnitude'][v_index]
-        output_voltage_np[:, 1] = (output_voltage_np[:, 1] + 1) * scaler['mean_voltage_angle']
+        # output_power_np[:, 0] = (output_power_np[:, 0] + 1) * scaler['mean_active_power'][p_index]
+        # output_power_np[:, 1] = (output_power_np[:, 1] + 1) * scaler['mean_reactive_power'][p_index]
+        # output_voltage_np[:, 0] = (output_voltage_np[:, 0] + 1) * scaler['mean_voltage_magnitude'][v_index]
+        # output_voltage_np[:, 1] = (output_voltage_np[:, 1] + 1) * scaler['mean_voltage_angle']
         
-        # Transform target back to original scale
+        # # Transform target back to original scale
         target_power_np = input_x.cpu().numpy()
-        target_power_np[:, 0] = (target_power_np[:, 0] + 1) * scaler['mean_active_power'][p_index]
-        target_power_np[:, 1] = (target_power_np[:, 1] + 1) * scaler['mean_reactive_power'][p_index]
+        # target_power_np[:, 0] = (target_power_np[:, 0] + 1) * scaler['mean_active_power'][p_index]
+        # target_power_np[:, 1] = (target_power_np[:, 1] + 1) * scaler['mean_reactive_power'][p_index]
         target_voltage_np = output_y.cpu().numpy()
-        target_voltage_np[:, 0] = (target_voltage_np[:, 0] + 1) * scaler['mean_voltage_magnitude'][v_index]
-        target_voltage_np[:, 1] = (target_voltage_np[:, 1] + 1) * scaler['mean_voltage_angle']
+        # target_voltage_np[:, 0] = (target_voltage_np[:, 0] + 1) * scaler['mean_voltage_magnitude'][v_index]
+        # target_voltage_np[:, 1] = (target_voltage_np[:, 1] + 1) * scaler['mean_voltage_angle']
         
         # Calculate evaluation metrics, numpy
-        power_mse = mse_loss(output_power_np, target_power_np)
-        power_rmse = rmse_loss(output_power_np, target_power_np)
-        voltage_mse = mse_loss(output_voltage_np, target_voltage_np)
-        voltage_rmse = rmse_loss(output_voltage_np, target_voltage_np)
-        power_mse_list.append(power_mse)
-        power_rmse_list.append(power_rmse)
-        voltage_mse_list.append(voltage_mse)
-        voltage_rmse_list.append(voltage_rmse)
-
+        power_mse_active = mse_loss(output_power_np[:, 0], target_power_np[:, 0])
+        power_mse_reactive = mse_loss(output_power_np[:, 1], target_power_np[:, 1])
+        power_rmse_active = rmse_loss(output_power_np[:, 0], target_power_np[:, 0])
+        power_rmse_reactive = rmse_loss(output_power_np[:, 1], target_power_np[:, 1])
+        voltage_mse_magnitude = mse_loss(output_voltage_np[:, 0], target_voltage_np[:, 0])
+        voltage_mse_angle = mse_loss(output_voltage_np[:, 1], target_voltage_np[:, 1])
+        voltage_rmse_magnitude = rmse_loss(output_voltage_np[:, 0], target_voltage_np[:, 0])
+        voltage_rmse_angle = rmse_loss(output_voltage_np[:, 1], target_voltage_np[:, 1])    
+        
+        # Append results
+        power_active_mse_list.append(power_mse_active)
+        power_active_rmse_list.append(power_rmse_active)
+        power_reactive_mse_list.append(power_mse_reactive)
+        power_reactive_rmse_list.append(power_rmse_reactive)
+        voltage_magnitude_mse_list.append(voltage_mse_magnitude)
+        voltage_magnitude_rmse_list.append(voltage_rmse_magnitude)
+        voltage_angle_mse_list.append(voltage_mse_angle)
+        voltage_angle_rmse_list.append(voltage_rmse_angle)
+        
 #--------------------
 # Save and print the evaluation results as a text file
 results_dir = 'src/testingpf/cfcpflowtest/evaluationresults'
@@ -183,11 +197,15 @@ results_path = os.path.join(results_dir, 'cfcpflow_evaluation_39bus.txt')
 with open(results_path, 'w') as f:
     f.write("CFCP-Flow Evaluation Results on IEEE 39-Bus System\n")
     f.write("--------------------------------------------------\n")
-    f.write(f"{'Bus':<10}{'Power MSE':<20}{'Power RMSE':<20}{'Voltage MSE':<20}{'Voltage RMSE':<20}\n")
+    f.write(f"{'Bus':<10}{'Active Power MSE':<20}{'Active Power RMSE':<20}{'Reactive Power MSE':<20}{'Reactive Power RMSE':<20}{'Voltage Mag MSE':<20}{'Voltage Mag RMSE':<20}{'Voltage Angle MSE':<20}{'Voltage Angle RMSE':<20}\n")
     for i in range(load_bus_num):
-        f.write(f"{i:<10}{power_mse_list[i]:<20.6f}{power_rmse_list[i]:<20.6f}{voltage_mse_list[i]:<20.6f}{voltage_rmse_list[i]:<20.6f}\n")
+        f.write(f"{i:<10}{power_active_mse_list[i]:<20.6f}{power_active_rmse_list[i]:<20.6f}{power_reactive_mse_list[i]:<20.6f}{power_reactive_rmse_list[i]:<20.6f}{voltage_magnitude_mse_list[i]:<20.6f}{voltage_magnitude_rmse_list[i]:<20.6f}{voltage_angle_mse_list[i]:<20.6f}{voltage_angle_rmse_list[i]:<20.6f}\n")
     f.write("--------------------------------------------------\n")
-    f.write(f"Average Power MSE: {np.mean(power_mse_list):.6f}\n")
-    f.write(f"Average Power RMSE: {np.mean(power_rmse_list):.6f}\n")
-    f.write(f"Average Voltage MSE: {np.mean(voltage_mse_list):.6f}\n")
-    f.write(f"Average Voltage RMSE: {np.mean(voltage_rmse_list):.6f}\n")
+    f.write(f"Average Active Power MSE: {np.mean(power_active_mse_list):.6f}\n")
+    f.write(f"Average Active Power RMSE: {np.mean(power_active_rmse_list):.6f}\n")
+    f.write(f"Average Reactive Power MSE: {np.mean(power_reactive_mse_list):.6f}\n")
+    f.write(f"Average Reactive Power RMSE: {np.mean(power_reactive_rmse_list):.6f}\n")
+    f.write(f"Average Voltage Magnitude MSE: {np.mean(voltage_magnitude_mse_list):.6f}\n")
+    f.write(f"Average Voltage Magnitude RMSE: {np.mean(voltage_magnitude_rmse_list):.6f}\n")
+    f.write(f"Average Voltage Angle MSE: {np.mean(voltage_angle_mse_list):.6f}\n")
+    f.write(f"Average Voltage Angle RMSE: {np.mean(voltage_angle_rmse_list):.6f}\n")
