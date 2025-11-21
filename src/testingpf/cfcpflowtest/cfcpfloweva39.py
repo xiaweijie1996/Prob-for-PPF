@@ -8,10 +8,12 @@ import torch
 import numpy as np
 import yaml
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from src.models.cfcpflow.cfcpflow import SimplifiedFcpflow
 from src.powersystems.randomsys import  magnitude_transform, angle_transform
 from src.powersystems.ieee39 import Case39PF
+from src.testingpf.evaluationmetrics import mse_loss, rmse_loss
 
 # Set all torch floats to double precision
 torch.set_default_dtype(torch.float64)
@@ -83,64 +85,109 @@ fcp_model.eval()
 
 # --------------------
 # Create the data for evaluation
-input_x = torch.empty((0, 2), dtype=torch.float64).to(device)
-input_c = torch.empty((0, c_dim), dtype=torch.float64).to(device)
-output_y = torch.empty((0, 2), dtype=torch.float64).to(device)
-p_index = torch.randint(0, load_bus_num, (1,)).item()  # Random index for the power input for load bus (0 to 20)
-v_index = p_index
-for _b in range(1000):
-    coeff_active = np.random.uniform(-1, 1)
-    _active_power = base_ap + coeff_active * load_variance_rate * base_ap
-    _reactive_power = _active_power * load_rato
-    _active_power = _active_power.reshape(-1)
-    _reactive_power = _reactive_power.reshape(-1)
-    random_sys.set_loads(_active_power, _reactive_power)
-    
-    # Run the power flow analysis
-    solution = random_sys.run_pf()
-    solution = solution.loc[load_index].reset_index(drop=True)
-    # Transform the voltage magnitudes
-    _voltage_magnitudes = solution['vm_pu'].values
-    _voltage_angles = solution['va_degree'].values
-    
-    
-    _voltage_magnitudes = (_voltage_magnitudes / scaler['mean_voltage_magnitude']) - 1  # per unit deviation [-1, 1]
-    _voltage_angles = (_voltage_angles / scaler['mean_voltage_angle']) - 1
-    
-    _voltages = np.hstack((_voltage_magnitudes, _voltage_angles))
-    
-    # Convert to torch tensor
-    _active_power = (_active_power / scaler['mean_active_power']) - 1 
-    _reactive_power = (_reactive_power / scaler['mean_reactive_power']) - 1
-    
-    _input_power = torch.tensor(np.hstack((_active_power, _reactive_power)), dtype=torch.float64).to(device)
-    _input_power = _input_power.unsqueeze(0)  # shape (batch_size, 42)
-    _target_voltage = torch.tensor(_voltages, dtype=torch.float64).to(device)
-    _target_voltage = _target_voltage.unsqueeze(0)  # shape (batch_size, 42)
-    # print(input_power.shape, target_voltage.shape)
-    
-    #-------input and target power flow data preparation-------
-    _input_x = torch.cat((_input_power[:, p_index].unsqueeze(1), _input_power[:, p_index+load_bus_num-1].unsqueeze(1)), dim=1)  # shape (batch_size, 2)
-    _input_c = _input_power.clone()
-    
-    _output_y = torch.cat((_target_voltage[:, v_index].unsqueeze(1),
-                        _target_voltage[:, v_index+load_bus_num-1].unsqueeze(1)
-                        ), dim=1)
-    # print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
-    input_x = torch.cat((input_x, _input_x), dim=0)
-    input_c = torch.cat((input_c, _input_c), dim=0)
-    output_y = torch.cat((output_y, _output_y), dim=0)
+power_mse_list = []
+power_rmse_list = []
+voltage_mse_list = []
+voltage_rmse_list = []
+for p_index in range(load_bus_num):
+    input_x = torch.empty((0, 2), dtype=torch.float64).to(device)
+    input_c = torch.empty((0, c_dim), dtype=torch.float64).to(device)
+    output_y = torch.empty((0, 2), dtype=torch.float64).to(device)
+    v_index = p_index
+    print(f"Evaluating for load bus index: {p_index}")
+    for _b in tqdm(range(10)):
+        coeff_active = np.random.uniform(-1, 1)
+        _active_power = base_ap + coeff_active * load_variance_rate * base_ap
+        _reactive_power = _active_power * load_rato
+        _active_power = _active_power.reshape(-1)
+        _reactive_power = _reactive_power.reshape(-1)
+        random_sys.set_loads(_active_power, _reactive_power)
+        
+        # Run the power flow analysis
+        solution = random_sys.run_pf()
+        solution = solution.loc[load_index].reset_index(drop=True)
+        # Transform the voltage magnitudes
+        _voltage_magnitudes = solution['vm_pu'].values
+        _voltage_angles = solution['va_degree'].values
+        
+        
+        _voltage_magnitudes = (_voltage_magnitudes / scaler['mean_voltage_magnitude']) - 1  # per unit deviation [-1, 1]
+        _voltage_angles = (_voltage_angles / scaler['mean_voltage_angle']) - 1
+        
+        _voltages = np.hstack((_voltage_magnitudes, _voltage_angles))
+        
+        # Convert to torch tensor
+        _active_power = (_active_power / scaler['mean_active_power']) - 1 
+        _reactive_power = (_reactive_power / scaler['mean_reactive_power']) - 1
+        
+        _input_power = torch.tensor(np.hstack((_active_power, _reactive_power)), dtype=torch.float64).to(device)
+        _input_power = _input_power.unsqueeze(0)  # shape (batch_size, 42)
+        _target_voltage = torch.tensor(_voltages, dtype=torch.float64).to(device)
+        _target_voltage = _target_voltage.unsqueeze(0)  # shape (batch_size, 42)
+        # print(input_power.shape, target_voltage.shape)
+        
+        #-------input and target power flow data preparation-------
+        _input_x = torch.cat((_input_power[:, p_index].unsqueeze(1), _input_power[:, p_index+load_bus_num-1].unsqueeze(1)), dim=1)  # shape (batch_size, 2)
+        _input_c = _input_power.clone()
+        
+        _output_y = torch.cat((_target_voltage[:, v_index].unsqueeze(1),
+                            _target_voltage[:, v_index+load_bus_num-1].unsqueeze(1)
+                            ), dim=1)
+        # print(f"Input shape: {input_x.shape}, Condition shape: {input_c.shape}, Output shape: {output_y.shape}")
+        input_x = torch.cat((input_x, _input_x), dim=0)
+        input_c = torch.cat((input_c, _input_c), dim=0)
+        output_y = torch.cat((output_y, _output_y), dim=0)
+
+    #--------------------
+    # Evaluate the model
+    with torch.no_grad():
+        # Forward pass through the NICE model
+        print("Evaluating the model...")
+        output_voltage, _ja = fcp_model.forward(input_x, input_c, index_p=p_index, index_v=v_index)
+            
+        # Backward pass to get the output power
+        output_power, _j = fcp_model.inverse(output_y, input_c, index_p=p_index, index_v=v_index)
+            
+        # Transform back to original scale
+        output_power_np = output_power.cpu().numpy()
+        output_voltage_np = output_voltage.cpu().numpy()
+        output_power_np[:, 0] = (output_power_np[:, 0] + 1) * scaler['mean_active_power'][p_index]
+        output_power_np[:, 1] = (output_power_np[:, 1] + 1) * scaler['mean_reactive_power'][p_index]
+        output_voltage_np[:, 0] = (output_voltage_np[:, 0] + 1) * scaler['mean_voltage_magnitude'][v_index]
+        output_voltage_np[:, 1] = (output_voltage_np[:, 1] + 1) * scaler['mean_voltage_angle']
+        
+        # Transform target back to original scale
+        target_power_np = input_x.cpu().numpy()
+        target_power_np[:, 0] = (target_power_np[:, 0] + 1) * scaler['mean_active_power'][p_index]
+        target_power_np[:, 1] = (target_power_np[:, 1] + 1) * scaler['mean_reactive_power'][p_index]
+        target_voltage_np = output_y.cpu().numpy()
+        target_voltage_np[:, 0] = (target_voltage_np[:, 0] + 1) * scaler['mean_voltage_magnitude'][v_index]
+        target_voltage_np[:, 1] = (target_voltage_np[:, 1] + 1) * scaler['mean_voltage_angle']
+        
+        # Calculate evaluation metrics, numpy
+        power_mse = mse_loss(output_power_np, target_power_np)
+        power_rmse = rmse_loss(output_power_np, target_power_np)
+        voltage_mse = mse_loss(output_voltage_np, target_voltage_np)
+        voltage_rmse = rmse_loss(output_voltage_np, target_voltage_np)
+        power_mse_list.append(power_mse)
+        power_rmse_list.append(power_rmse)
+        voltage_mse_list.append(voltage_mse)
+        voltage_rmse_list.append(voltage_rmse)
 
 #--------------------
-# Evaluate the model
-with torch.no_grad():
-    # Forward pass: x,c -> z
-    z, log_det_jacobian = fcp_model.forward(input_x, input_c)
-    
-    # Inverse pass: z,c -> x_reconstructed
-    x_reconstructed, inv_log_det_jacobian = fcp_model.inverse(z, input_c)
-    
-    # Compute the reconstruction loss
-    reconstruction_loss = torch.mean((input_x - x_reconstructed) ** 2).item()
-    
-    print(f"Reconstruction Loss (MSE): {reconstruction_loss}")
+# Save and print the evaluation results as a text file
+results_dir = 'src/testingpf/cfcpflowtest/evaluationresults'
+if not os.path.exists(results_dir):
+    os.makedirs(results_dir)
+results_path = os.path.join(results_dir, 'cfcpflow_evaluation_39bus.txt')
+with open(results_path, 'w') as f:
+    f.write("CFCP-Flow Evaluation Results on IEEE 39-Bus System\n")
+    f.write("--------------------------------------------------\n")
+    f.write(f"{'Bus':<10}{'Power MSE':<20}{'Power RMSE':<20}{'Voltage MSE':<20}{'Voltage RMSE':<20}\n")
+    for i in range(load_bus_num):
+        f.write(f"{i:<10}{power_mse_list[i]:<20.6f}{power_rmse_list[i]:<20.6f}{voltage_mse_list[i]:<20.6f}{voltage_rmse_list[i]:<20.6f}\n")
+    f.write("--------------------------------------------------\n")
+    f.write(f"Average Power MSE: {np.mean(power_mse_list):.6f}\n")
+    f.write(f"Average Power RMSE: {np.mean(power_rmse_list):.6f}\n")
+    f.write(f"Average Voltage MSE: {np.mean(voltage_mse_list):.6f}\n")
+    f.write(f"Average Voltage RMSE: {np.mean(voltage_rmse_list):.6f}\n")
