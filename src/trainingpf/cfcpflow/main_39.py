@@ -85,7 +85,7 @@ def main():
     print(f"Model Parameters: {sum(p.numel() for p in fcp_model.parameters() if p.requires_grad)}")
     
     # Define the optimizer
-    optimizer = torch.optim.AdamW(fcp_model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(fcp_model.parameters(), lr=lr)
     
     # Define the loss function
     loss_function = torch.nn.MSELoss()
@@ -113,6 +113,8 @@ def main():
         input_x = torch.empty((0, 2), dtype=torch.float64).to(device)
         input_c = torch.empty((0, c_dim), dtype=torch.float64).to(device)
         output_y = torch.empty((0, 2), dtype=torch.float64).to(device)
+        p_index = torch.randint(0, load_bus_num, (1,)).item()  # Random index for the power input for load bus (0 to 20)
+        v_index = p_index
         for _b in range(batch_size):
             coeff_active = np.random.uniform(-1, 1)
             _active_power = base_ap + coeff_active * load_variance_rate * base_ap
@@ -145,9 +147,6 @@ def main():
             # print(input_power.shape, target_voltage.shape)
             
             #-------input and target power flow data preparation-------
-            p_index = torch.randint(0, load_bus_num, (1,)).item()  # Random index for the power input for load bus (0 to 20)
-            v_index = p_index
-
             _input_x = torch.cat((_input_power[:, p_index].unsqueeze(1), _input_power[:, p_index+load_bus_num-1].unsqueeze(1)), dim=1)  # shape (batch_size, 2)
             _input_c = _input_power.clone()
             
@@ -196,6 +195,7 @@ def main():
         wb.log({
             "loss_forward": loss_forward.item(),
             "loss_backward": loss_backward.item(),
+            "loss_total": loss.item(),
             "jacobian": _ja.mean().item(),
             "epoch": _+1,
             "percentage_error_magnitude": loss_mangitude.item(),
@@ -204,7 +204,7 @@ def main():
         })
         
         # Save the model every 100 epochs
-        if (_ + 1) > 100 and end_loss > loss_forward.item():
+        if (_ + 1) % 50 ==0 and end_loss > loss.item():
             end_loss = loss_forward.item()
             torch.save(fcp_model.state_dict(), os.path.join(save_path, f"CFCPmodel_{num_nodes}_new.pth"))
             print(f"saved at epoch {_+1} with loss {end_loss}")
